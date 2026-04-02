@@ -112,12 +112,30 @@
         html.dark .custom-table td { border-color: #27272a; }
         html.dark .search-input { background-color: #18181b; border-color: #27272a; color: white; }
         html.dark .grand-total-bg { background: rgba(2, 132, 199, 0.1); border-color: rgba(2, 132, 199, 0.2); }
+
+        /* Hapus Header Filament Bawaan */
+        .fi-header { display: none !important; }
+        .fi-main-ctn { padding-top: 1rem !important; }
     </style>
 
-    {{-- Search Bar --}}
-    <div class="search-box">
-        <input type="text" wire:model.live.debounce.300ms="tableSearch" 
-               placeholder="Cari nama periode..." class="search-input">
+    {{-- Header & Search Bar --}}
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; gap: 1rem; flex-wrap: wrap;">
+        <div class="search-box" style="margin-bottom: 0; flex: 1; min-width: 300px;">
+            <input type="text" wire:model.live.debounce.300ms="tableSearch" 
+                   placeholder="Cari nama periode..." class="search-input">
+        </div>
+
+        <button 
+            wire:click="mountAction('generatePayroll')"
+            style="background: #2563eb; color: white; padding: 12px 24px; border-radius: 14px; font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; gap: 10px; transition: 0.3s; border: none; cursor: pointer; box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);"
+            onmouseover="this.style.background='#1d4ed8'; this.style.transform='translateY(-2px)';"
+            onmouseout="this.style.background='#2563eb'; this.style.transform='translateY(0)';"
+        >
+            <svg style="width: 20px; height: 20px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+            Generate Rekap Gaji
+        </button>
     </div>
 
     @php
@@ -209,8 +227,6 @@
         </div>
     </div>
 
-    {{-- Tabel Asli --}}
-    <div class="opacity-0 h-0 overflow-hidden">
-        {{ $this->table }}
-    </div>
+    {{-- Tabel Asli Filament - DIHAPUS TOTAL --}}
+    <x-filament-actions::modals />
 </x-filament-panels::page>

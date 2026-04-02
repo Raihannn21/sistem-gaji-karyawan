@@ -34,7 +34,7 @@ class AdminPanelProvider extends PanelProvider
                 'warning' => Color::Amber,
             ])
             ->font('Poppins')
-            ->brandName('Sistem Gaji Cimol Bojot Aa')
+            ->brandName('Sistem Gaji Konveksi Celana')
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
@@ -58,6 +58,10 @@ class AdminPanelProvider extends PanelProvider
             ->renderHook(
                 \Filament\View\PanelsRenderHook::TOPBAR_START,
                 fn(): string => view('filament.custom-header')->render(),
+            )
+            ->renderHook(
+                \Filament\View\PanelsRenderHook::AUTH_LOGIN_FORM_BEFORE,
+                fn(): string => view('filament.custom-login')->render(),
             );
     }
 }

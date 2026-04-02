@@ -107,7 +107,7 @@
                 </h1>
                 <p
                     style="font-size: 1rem; color: rgba(255,255,255,0.9); margin: 0; max-width: 600px; line-height: 1.6;">
-                    Selamat datang di <b>Sistem Gaji Cimol Bojot Aa</b>. Sistem siap membantu Anda merangkum data
+                    Selamat datang di <b>Sistem Gaji Konveksi Celana</b>. Sistem siap membantu Anda merangkum data
                     kehadiran, kalkulasi gaji, hingga pembuatan slip.
                 </p>
             </div>

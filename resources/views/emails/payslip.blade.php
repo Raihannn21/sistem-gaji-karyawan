@@ -36,7 +36,7 @@
         <table class="header-table">
             <tr>
                 <td>
-                    <h1 class="kop-title">{{ strtoupper(config('app.name', 'CIMOL BOJOT AA')) }}</h1>
+                    <h1 class="kop-title">{{ strtoupper(config('app.name', 'KONVEKSI CELANA')) }}</h1>
                     <p class="kop-subtitle">Dokumen Resmi Rincian Pembayaran Slip Gaji</p>
                 </td>
                 <td style="text-align: right; vertical-align: bottom;">

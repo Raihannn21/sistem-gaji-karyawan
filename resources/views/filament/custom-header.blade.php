@@ -16,15 +16,13 @@
     <div style="display: flex; align-items: center; gap: 15px;">
         <div
             style="background: linear-gradient(135deg, #2563eb, #1d4ed8); width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; font-size: 1.25rem; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4); transform: skewX(-5deg);">
-            C
+            KC
         </div>
         <div style="display: flex; flex-direction: column;">
             <span
-                style="font-weight: 950; font-size: 0.9rem; color: #1e293b; letter-spacing: -0.5px; text-transform: uppercase;">Cimol
-                Bojot Aa</span>
+                style="font-weight: 950; font-size: 0.9rem; color: #1e293b; letter-spacing: -0.5px; text-transform: uppercase;">Konveksi Celana</span>
             <span
-                style="font-size: 0.65rem; font-weight: 800; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase;">Sistem
-                Manajemen Penggajian</span>
+                style="font-size: 0.65rem; font-weight: 800; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase;">Sistem Manajemen Penggajian</span>
         </div>
     </div>
 
@@ -66,7 +64,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                     </svg>
-                    Keluar Sistem
+                    Logout System
                 </button>
             </form>
         </div>
@@ -79,37 +77,69 @@
         padding: 15px !important;
     }
 
+    .fi-sidebar-group {
+        margin-bottom: 10px !important;
+    }
+
+    .fi-sidebar-group-label {
+        font-size: 0.65rem !important;
+        font-weight: 850 !important;
+        color: #94a3b8 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 1.5px !important;
+        margin-bottom: 6px !important;
+        padding-left: 20px !important;
+    }
+
     .fi-sidebar-item {
-        margin-bottom: 5px !important;
+        margin-bottom: 2px !important;
+        border: none !important;
     }
 
     .fi-sidebar-item-button {
         border-radius: 12px !important;
-        transition: all 0.2s ease !important;
-        padding: 10px 15px !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        padding: 10px 18px !important;
+        border: 1px solid transparent !important;
     }
 
     .fi-sidebar-item-button:hover {
-        background-color: #f1f5f9 !important;
-        transform: translateX(5px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+        background-color: #f8fafc !important;
+        transform: translateX(8px);
+        border-color: #e2e8f0 !important;
     }
 
     .fi-sidebar-item-active .fi-sidebar-item-button {
-        background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
-        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25) !important;
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+        box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.35) !important;
+        border: none !important;
     }
 
     .fi-sidebar-item-active .fi-sidebar-item-button * {
         color: white !important;
+        font-weight: 800 !important;
     }
 
     .fi-sidebar-header {
         border-bottom: none !important;
-        padding-bottom: 0 !important;
+        padding: 25px !important;
     }
 
+    /* Ganti Logo/Icon di Sidebar agar selaras dengan brand baru kita */
     .fi-sidebar-header>a>div {
         display: none !important;
+    }
+
+    .fi-sidebar-header::before {
+        content: 'Konveksi Celana';
+        font-family: 'Inter', sans-serif;
+        font-size: 0.8rem;
+        font-weight: 900;
+        color: #2563eb;
+        background: #eff6ff;
+        padding: 6px 12px;
+        border-radius: 8px;
     }
 
     /* AGGRESSIVE CLEANING TOPBAR FILAMENT */

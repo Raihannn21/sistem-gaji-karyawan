@@ -173,27 +173,29 @@
 
     <div class="attendance-container">
         {{-- Search & Filter Bar --}}
-        <div class="search-row flex-wrap">
-            <div class="search-box">
-                <input type="text" wire:model.live.debounce.300ms="tableSearch" placeholder="Cari nama karyawan...">
-            </div>
+        <div class="search-row flex-wrap justify-between">
+            <div style="display: flex; gap: 1rem; flex: 1; align-items: center;">
+                <div class="search-box">
+                    <input type="text" wire:model.live.debounce.300ms="tableSearch" placeholder="Cari nama karyawan...">
+                </div>
 
-            <div class="flex items-center gap-2">
-                <select wire:model.live="tableFilters.bulan_tahun.bulan"
-                    class="rounded-lg border-gray-300 text-xs font-bold py-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-700">
-                    <option value="">Semua Bulan</option>
-                    @foreach(['01' => 'Jan', '02' => 'Feb', '03' => 'Mar', '04' => 'Apr', '05' => 'Mei', '06' => 'Jun', '07' => 'Jul', '08' => 'Agu', '09' => 'Sep', '10' => 'Okt', '11' => 'Nov', '12' => 'Des'] as $v => $l)
-                        <option value="{{ $v }}">{{ $l }}</option>
-                    @endforeach
-                </select>
+                <div class="flex items-center gap-2">
+                    <select wire:model.live="tableFilters.bulan_tahun.bulan"
+                        class="rounded-lg border-gray-300 text-xs font-bold py-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-700">
+                        <option value="">Semua Bulan</option>
+                        @foreach(['01' => 'Jan', '02' => 'Feb', '03' => 'Mar', '04' => 'Apr', '05' => 'Mei', '06' => 'Jun', '07' => 'Jul', '08' => 'Agu', '09' => 'Sep', '10' => 'Okt', '11' => 'Nov', '12' => 'Des'] as $v => $l)
+                            <option value="{{ $v }}">{{ $l }}</option>
+                        @endforeach
+                    </select>
 
-                <select wire:model.live="tableFilters.bulan_tahun.tahun"
-                    class="rounded-lg border-gray-300 text-xs font-bold py-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-700">
-                    <option value="">Semua Tahun</option>
-                    @for($y = date('Y') - 1; $y <= date('Y') + 1; $y++)
-                        <option value="{{ $y }}">{{ $y }}</option>
-                    @endfor
-                </select>
+                    <select wire:model.live="tableFilters.bulan_tahun.tahun"
+                        class="rounded-lg border-gray-300 text-xs font-bold py-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-700">
+                        <option value="">Semua Tahun</option>
+                        @for($y = date('Y') - 1; $y <= date('Y') + 1; $y++)
+                            <option value="{{ $y }}">{{ $y }}</option>
+                        @endfor
+                    </select>
+                </div>
             </div>
         </div>
 
@@ -274,4 +276,6 @@
             </table>
         </div>
     </div>
+    
+    <x-filament-actions::modals />
 </x-filament-panels::page>
