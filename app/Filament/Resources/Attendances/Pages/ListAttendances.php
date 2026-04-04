@@ -6,7 +6,6 @@ use App\Filament\Resources\Attendances\AttendanceResource;
 use App\Models\Employee;
 use App\Models\Attendance;
 use App\Models\Holiday;
-use Filament\Actions\CreateAction;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Resources\Pages\ListRecords;
@@ -114,7 +113,6 @@ class ListAttendances extends ListRecords
                         ->success()
                         ->send();
                 }),
-            CreateAction::make(),
         ];
     }
 }

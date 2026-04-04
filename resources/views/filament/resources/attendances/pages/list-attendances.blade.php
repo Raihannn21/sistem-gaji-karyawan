@@ -241,9 +241,13 @@
                 Import CSV / Excel Kehadiran
             </button>
 
-            <button type="button" class="top-action-btn btn-create" wire:click="mountAction('create')">
+            <a
+                href="{{ \App\Filament\Resources\Attendances\AttendanceResource::getUrl('create') }}"
+                class="top-action-btn btn-create"
+                style="display: inline-flex; align-items: center; text-decoration: none;"
+            >
                 Buat Kehadiran
-            </button>
+            </a>
         </div>
     </div>
 
