@@ -118,16 +118,9 @@ class DetailsRelationManager extends RelationManager
                                         foreach ($attendances as $att) {
                                             $isLibur = $att->is_holiday ? '<span class="text-danger-600 font-bold">Ya</span>' : '<span class="text-gray-500">Tidak</span>';
 
-                                            $lembur = 0;
-                                            if ($att->is_holiday) {
-                                                $lembur = floor($att->total_jam_kerja);
-                                            } else {
-                                                if ($att->total_jam_kerja > 8 && !is_null($att->scan_masuk) && !is_null($att->scan_pulang)) {
-                                                    $lembur = floor($att->total_jam_kerja - 8);
-                                                }
-                                            }
+                                            $lembur = max((float) $att->approved_overtime_hours, 0);
 
-                                            $lemburText = $lembur > 0 ? "<span class=\"font-bold text-success-600\">{$lembur} Jam</span>" : "-";
+                                            $lemburText = $lembur > 0 ? "<span class=\"font-bold text-success-600\">" . rtrim(rtrim(number_format($lembur, 2, '.', ''), '0'), '.') . " Jam</span>" : "-";
                                             $jamText = floor($att->total_jam_kerja) . "j " . round(($att->total_jam_kerja - floor($att->total_jam_kerja)) * 60) . "m";
 
                                             $html .= "<tr class=\"hover:bg-gray-50 dark:hover:bg-white/5 transition-colors\">
@@ -153,11 +146,11 @@ class DetailsRelationManager extends RelationManager
 
                                         Placeholder::make('jam_lembur_biasa')
                                             ->label('Lembur Hari Biasa')
-                                            ->content(fn($record) => "{$record->jam_lembur_biasa} Jam × Rp " . number_format($record->total_gaji_lembur_biasa / max($record->jam_lembur_biasa, 1), 0, ',', '.') . " = Rp " . number_format($record->total_gaji_lembur_biasa, 0, ',', '.')),
+                                            ->content(fn($record) => rtrim(rtrim(number_format((float) $record->jam_lembur_biasa, 2, '.', ''), '0'), '.') . " Jam × Rp " . number_format($record->total_gaji_lembur_biasa / max((float) $record->jam_lembur_biasa, 1), 0, ',', '.') . " = Rp " . number_format($record->total_gaji_lembur_biasa, 0, ',', '.')),
 
                                         Placeholder::make('jam_lembur_libur')
                                             ->label('Lembur Hari Libur')
-                                            ->content(fn($record) => "{$record->jam_lembur_libur} Jam × Rp " . number_format($record->total_gaji_lembur_libur / max($record->jam_lembur_libur, 1), 0, ',', '.') . " = Rp " . number_format($record->total_gaji_lembur_libur, 0, ',', '.')),
+                                            ->content(fn($record) => rtrim(rtrim(number_format((float) $record->jam_lembur_libur, 2, '.', ''), '0'), '.') . " Jam × Rp " . number_format($record->total_gaji_lembur_libur / max((float) $record->jam_lembur_libur, 1), 0, ',', '.') . " = Rp " . number_format($record->total_gaji_lembur_libur, 0, ',', '.')),
 
                                         Placeholder::make('total_gaji')
                                             ->label('TOTAL PENDAPATAN AKHIR')

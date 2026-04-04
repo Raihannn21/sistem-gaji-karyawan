@@ -89,9 +89,6 @@ class ListAttendances extends ListRecords
                                 
                                 // Menjadikan jam desimal (contoh: 8 jam 30 menit = 8.5)
                                 $totalJam = $awal->diffInMinutes($akhir) / 60;
-                            } else {
-                                // Lupa scan salah satu (masuk saja / pulang saja) -> dihitung kehadiran penuh 8 jam tanpa lembur
-                                $totalJam = 8;
                             }
 
                             // 6. Simpan Data Kehadiran (Upsert agar aman jika import 2x)

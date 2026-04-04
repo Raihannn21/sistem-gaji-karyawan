@@ -169,7 +169,83 @@
         html.dark .holiday-row {
             background-color: rgba(185, 28, 28, 0.1) !important;
         }
+
+        .fi-header {
+            display: none !important;
+        }
+
+        .page-heading-wrap {
+            margin-bottom: 1rem;
+        }
+
+        .page-kicker {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #64748b;
+            margin-bottom: 0.3rem;
+        }
+
+        .page-title {
+            font-size: 2.35rem;
+            font-weight: 900;
+            letter-spacing: -0.03em;
+            color: #0f172a;
+            line-height: 1.05;
+        }
+
+        .top-action-row {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-top: 1.25rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .top-action-btn {
+            border: none;
+            border-radius: 0.8rem;
+            padding: 0.72rem 1rem;
+            font-size: 0.9rem;
+            font-weight: 800;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .top-action-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn-import { background: #10b981; }
+        .btn-import:hover { background: #059669; }
+
+        .btn-create { background: #2563eb; }
+        .btn-create:hover { background: #1d4ed8; }
+
+        html.dark .page-title {
+            color: #f8fafc;
+        }
+
+        html.dark .page-kicker {
+            color: #a1a1aa;
+        }
     </style>
+
+    <div class="page-heading-wrap">
+        <span class="page-kicker">Rekap Kehadiran > Daftar</span>
+        <h1 class="page-title">Rekap Kehadiran</h1>
+
+        <div class="top-action-row">
+            <button type="button" class="top-action-btn btn-import" wire:click="mountAction('importCsv')">
+                Import CSV / Excel Kehadiran
+            </button>
+
+            <button type="button" class="top-action-btn btn-create" wire:click="mountAction('create')">
+                Buat Kehadiran
+            </button>
+        </div>
+    </div>
 
     <div class="attendance-container">
         {{-- Search & Filter Bar --}}
@@ -208,7 +284,9 @@
                         <th>Scan Masuk</th>
                         <th>Scan Pulang</th>
                         <th>Durasi Kerja</th>
+                        <th>Lembur Disetujui</th>
                         <th>Keterangan</th>
+                        <th>Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -227,6 +305,11 @@
                             ->when($tahun, fn($q) => $q->whereYear('tanggal', $tahun))
                             ->orderBy('tanggal', 'desc')
                             ->get();
+
+                        $holidayDescriptions = \App\Models\Holiday::query()
+                            ->whereIn('tanggal', $attendances->pluck('tanggal')->map(fn($date) => \Carbon\Carbon::parse($date)->toDateString())->all())
+                            ->pluck('keterangan', 'tanggal')
+                            ->all();
                     @endphp
 
                     @forelse($attendances as $attendance)
@@ -258,16 +341,39 @@
                                 <span class="total-duration">{{ number_format($attendance->total_jam_kerja, 1) }} Jam</span>
                             </td>
                             <td>
+                                <span class="text-pink-600 font-bold">{{ rtrim(rtrim(number_format((float) $attendance->approved_overtime_hours, 2, '.', ''), '0'), '.') }} Jam</span>
+                            </td>
+                            <td>
                                 @if($attendance->is_holiday)
-                                    <span class="holiday-badge">LIBUR / MINGGU</span>
+                                    @php
+                                        $attendanceDate = \Carbon\Carbon::parse($attendance->tanggal);
+                                        $dateKey = $attendanceDate->toDateString();
+                                        $holidayDesc = $holidayDescriptions[$dateKey] ?? null;
+                                    @endphp
+
+                                    @if($holidayDesc)
+                                        <span class="holiday-badge">{{ strtoupper($holidayDesc) }}</span>
+                                    @elseif($attendanceDate->isSunday())
+                                        <span class="holiday-badge">MINGGU</span>
+                                    @else
+                                        <span class="holiday-badge">LIBUR</span>
+                                    @endif
                                 @else
                                     <span class="text-emerald-500 font-bold text-[10px] uppercase">Normal Day</span>
                                 @endif
                             </td>
+                            <td>
+                                <a
+                                    href="{{ \App\Filament\Resources\Attendances\AttendanceResource::getUrl('edit', ['record' => $attendance->id]) }}"
+                                    style="display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 8px; background: #eff6ff; color: #1d4ed8; font-size: 0.75rem; font-weight: 800; border: 1px solid #dbeafe; text-decoration: none;"
+                                >
+                                    Edit
+                                </a>
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="text-center py-12 text-gray-400 font-medium italic">
+                            <td colspan="8" class="text-center py-12 text-gray-400 font-medium italic">
                                 Tidak ada data kehadiran yang ditemukan.
                             </td>
                         </tr>

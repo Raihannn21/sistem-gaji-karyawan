@@ -9,6 +9,7 @@ use Filament\Resources\Pages\EditRecord;
 class EditAttendance extends EditRecord
 {
     protected static string $resource = AttendanceResource::class;
+    protected string $view = 'filament.resources.attendances.pages.attendance-form';
 
     protected function getHeaderActions(): array
     {

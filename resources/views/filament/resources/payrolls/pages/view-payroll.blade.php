@@ -315,7 +315,7 @@
                                     {{ number_format($d->total_gaji_lembur_biasa + $d->total_gaji_lembur_libur, 0, ',', '.') }}
                                 </div>
                                 <div class="text-[9px] text-slate-400 font-black uppercase">
-                                    {{ $d->jam_lembur_biasa + $d->jam_lembur_libur }} Jam diakui</div>
+                                    {{ rtrim(rtrim(number_format($d->jam_lembur_biasa + $d->jam_lembur_libur, 2, '.', ''), '0'), '.') }} Jam diakui</div>
                             </td>
                             <td class="text-right align-middle">
                                 <div class="total-pay-badge whitespace-nowrap" style="font-size: 0.95rem; display: block; text-align: center;">

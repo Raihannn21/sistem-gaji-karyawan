@@ -8,6 +8,11 @@ class PayrollDetail extends Model
 {
     protected $guarded = ['id'];
 
+    protected $casts = [
+        'jam_lembur_biasa' => 'float',
+        'jam_lembur_libur' => 'float',
+    ];
+
     public function payroll()
     {
         return $this->belongsTo(Payroll::class);

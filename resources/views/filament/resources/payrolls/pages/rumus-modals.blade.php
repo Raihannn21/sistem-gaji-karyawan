@@ -79,7 +79,7 @@
         @foreach($attendances as $att)
             @php
                 $isLibur = $att->is_holiday;
-                $lembur = $isLibur ? floor($att->total_jam_kerja) : ($att->total_jam_kerja > 8 ? floor($att->total_jam_kerja - 8) : 0);
+                $lembur = max((float) $att->approved_overtime_hours, 0);
             @endphp
             <div class="daily-row">
                 <div style="display: flex; align-items: center; gap: 12px;">
@@ -97,7 +97,7 @@
                 @if($lembur > 0)
                     <div style="text-align: right;">
                         <div style="font-size: 8px; font-weight: 900; text-transform: uppercase; color: #db2777;">Lembur</div>
-                        <div style="font-size: 12px; font-weight: 900; color: #be123c;">+{{ $lembur }} Jm</div>
+                        <div style="font-size: 12px; font-weight: 900; color: #be123c;">+{{ rtrim(rtrim(number_format($lembur, 2, '.', ''), '0'), '.') }} Jm</div>
                     </div>
                 @endif
             </div>

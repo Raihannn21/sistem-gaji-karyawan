@@ -168,7 +168,98 @@
             border-color: #27272a;
             color: white;
         }
+
+        .fi-header {
+            display: none !important;
+        }
+
+        .top-action-row {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .top-action-btn {
+            border: none;
+            border-radius: 0.75rem;
+            padding: 0.65rem 1rem;
+            font-size: 0.78rem;
+            font-weight: 800;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .top-action-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn-import { background: #16a34a; }
+        .btn-import:hover { background: #15803d; }
+
+        .btn-export { background: #0ea5e9; }
+        .btn-export:hover { background: #0284c7; }
+
+        .btn-create { background: #2563eb; }
+        .btn-create:hover { background: #1d4ed8; }
+
+        .page-heading-wrap {
+            margin-bottom: 1rem;
+        }
+
+        .page-kicker {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #64748b;
+            margin-bottom: 0.35rem;
+        }
+
+        .page-title {
+            font-size: 2.3rem;
+            font-weight: 900;
+            letter-spacing: -0.03em;
+            color: #0f172a;
+            line-height: 1.05;
+        }
+
+        .page-subtitle {
+            margin-top: 0.45rem;
+            font-size: 0.92rem;
+            color: #64748b;
+            max-width: 680px;
+        }
+
+        html.dark .page-title {
+            color: #f8fafc;
+        }
+
+        html.dark .page-kicker,
+        html.dark .page-subtitle {
+            color: #a1a1aa;
+        }
     </style>
+
+    <div class="page-heading-wrap">
+        <span class="page-kicker">Data Master</span>
+        <h1 class="page-title">Data Karyawan</h1>
+        <p class="page-subtitle">Kelola profil karyawan, import data massal, dan export data untuk kebutuhan administrasi.</p>
+    </div>
+
+    <div class="top-action-row">
+        <button type="button" class="top-action-btn btn-import" wire:click="mountAction('importEmployees')">
+            Import Karyawan
+        </button>
+
+        <button type="button" class="top-action-btn btn-export" wire:click="mountAction('exportEmployees')">
+            Export Karyawan
+        </button>
+
+        <button type="button" class="top-action-btn btn-create" wire:click="mountAction('create')">
+            Tambah Karyawan
+        </button>
+    </div>
 
     {{-- Search Bar --}}
     <div class="search-container">
@@ -224,4 +315,6 @@
             </div>
         @endforeach
     </div>
+
+    <x-filament-actions::modals />
 </x-filament-panels::page>
