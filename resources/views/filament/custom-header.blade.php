@@ -4,6 +4,13 @@
     }
 </style>
 
+@php
+    $roleLabel = data_get(auth()->user(), 'role')
+        ?? data_get(auth()->user(), 'jabatan')
+        ?? data_get(auth()->user(), 'position')
+        ?? 'Admin';
+@endphp
+
 <div id="custom-modern-header" style="
     position: absolute; inset: 0; z-index: 9999;
     width: 100%; height: 100%; min-height: 65px;
@@ -29,9 +36,9 @@
     {{-- Sisi Kanan: Profile & Logout --}}
     <div x-data="{ open: false }" style="position: relative; display: flex; align-items: center; gap: 20px;">
         <div style="text-align: right; display: flex; flex-direction: column;">
-            <span style="font-size: 0.8rem; font-weight: 900; color: #334155;">{{ auth()->user()->name }}</span>
-            <span
-                style="font-size: 0.6rem; font-weight: 800; color: #10b981; text-transform: uppercase; letter-spacing: 0.5px;">Superadmin
+            <span class="custom-user-name" style="font-size: 0.8rem; font-weight: 900; color: #334155;">{{ auth()->user()->name }}</span>
+            <span class="custom-user-status"
+                style="font-size: 0.6rem; font-weight: 800; color: #10b981; text-transform: uppercase; letter-spacing: 0.5px;">{{ $roleLabel }}
                 • Online Status</span>
         </div>
 
@@ -72,9 +79,21 @@
 </div>
 
 <style>
+    aside.fi-sidebar {
+        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
+        border-right: 1px solid #e2e8f0 !important;
+        box-shadow: 8px 0 26px -24px rgba(15, 23, 42, 0.35) !important;
+    }
+
+    .fi-sidebar-header {
+        border-bottom: 1px dashed #dbeafe !important;
+        padding: 22px 18px !important;
+        margin-bottom: 6px !important;
+    }
+
     /* MODERNIZE SIDEBAR FILAMENT (Original Filament Sidebar) */
     nav.fi-sidebar-nav {
-        padding: 15px !important;
+        padding: 16px 12px !important;
     }
 
     .fi-sidebar-group {
@@ -92,26 +111,27 @@
     }
 
     .fi-sidebar-item {
-        margin-bottom: 2px !important;
+        margin-bottom: 4px !important;
         border: none !important;
     }
 
     .fi-sidebar-item-button {
-        border-radius: 12px !important;
+        border-radius: 14px !important;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        padding: 10px 18px !important;
+        padding: 11px 14px !important;
         border: 1px solid transparent !important;
+        background: #ffffff !important;
     }
 
     .fi-sidebar-item-button:hover {
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
-        background-color: #f8fafc !important;
-        transform: translateX(8px);
-        border-color: #e2e8f0 !important;
+        box-shadow: 0 12px 22px -18px rgba(37, 99, 235, 0.5) !important;
+        background-color: #f8fbff !important;
+        transform: translateX(6px);
+        border-color: #bfdbfe !important;
     }
 
     .fi-sidebar-item-active .fi-sidebar-item-button {
-        background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+        background: linear-gradient(135deg, #1d4ed8, #2563eb) !important;
         box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.35) !important;
         border: none !important;
     }
@@ -119,11 +139,6 @@
     .fi-sidebar-item-active .fi-sidebar-item-button * {
         color: white !important;
         font-weight: 800 !important;
-    }
-
-    .fi-sidebar-header {
-        border-bottom: none !important;
-        padding: 25px !important;
     }
 
     /* Ganti Logo/Icon di Sidebar agar selaras dengan brand baru kita */
@@ -134,12 +149,13 @@
     .fi-sidebar-header::before {
         content: 'Konveksi Celana';
         font-family: 'Inter', sans-serif;
-        font-size: 0.8rem;
+        font-size: 0.78rem;
         font-weight: 900;
         color: #2563eb;
         background: #eff6ff;
-        padding: 6px 12px;
-        border-radius: 8px;
+        padding: 7px 12px;
+        border-radius: 10px;
+        border: 1px solid #dbeafe;
     }
 
     /* AGGRESSIVE CLEANING TOPBAR FILAMENT */
@@ -171,8 +187,36 @@
         border-color: #1e293b !important;
     }
 
-    html.dark #custom-modern-header span {
+    html.dark aside.fi-sidebar {
+        background: linear-gradient(180deg, #111827 0%, #0f172a 100%) !important;
+        border-color: #1f2937 !important;
+        box-shadow: 8px 0 26px -24px rgba(0, 0, 0, 0.8) !important;
+    }
+
+    html.dark .fi-sidebar-header {
+        border-color: rgba(59, 130, 246, 0.25) !important;
+    }
+
+    html.dark .fi-sidebar-item-button {
+        background: #111827 !important;
+        border-color: #1f2937 !important;
+    }
+
+    html.dark .fi-sidebar-item-button:hover {
+        background: #172554 !important;
+        border-color: #1d4ed8 !important;
+    }
+
+    html.dark .fi-sidebar-group-label {
+        color: #93c5fd !important;
+    }
+
+    html.dark .custom-user-name {
         color: #f1f5f9 !important;
+    }
+
+    html.dark .custom-user-status {
+        color: #34d399 !important;
     }
 
     html.dark #custom-modern-header div[style*="background: white"] {

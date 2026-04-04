@@ -1,192 +1,438 @@
 <x-filament-panels::page class="fi-dashboard-page">
+    @php
+        $today = now()->toDateString();
+        $monthStart = now()->startOfMonth()->toDateString();
+        $monthEnd = now()->endOfMonth()->toDateString();
+
+        $karyawanAktif = \App\Models\Employee::where('is_active', true)->count();
+        $hadirHariIni = \App\Models\Attendance::whereDate('tanggal', $today)->where('is_holiday', false)->count();
+        $scanParsialHariIni = \App\Models\Attendance::whereDate('tanggal', $today)
+            ->where(function ($q) {
+                $q->whereNull('scan_masuk')->orWhereNull('scan_pulang');
+            })
+            ->count();
+        $totalPayrollBulanIni = \App\Models\Payroll::whereBetween('tanggal_selesai', [$monthStart, $monthEnd])->sum('grand_total');
+        $rataRataGaji = $karyawanAktif > 0 ? $totalPayrollBulanIni / $karyawanAktif : 0;
+
+        $dailyAttendanceRaw = \App\Models\Attendance::selectRaw('tanggal, COUNT(*) as total')
+            ->whereBetween('tanggal', [now()->subDays(6)->toDateString(), $today])
+            ->groupBy('tanggal')
+            ->pluck('total', 'tanggal')
+            ->toArray();
+
+        $dailyAttendanceSeries = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $d = now()->subDays($i);
+            $key = $d->toDateString();
+            $dailyAttendanceSeries[] = [
+                'label' => $d->translatedFormat('D'),
+                'value' => (int) ($dailyAttendanceRaw[$key] ?? 0),
+            ];
+        }
+
+        $maxDailyAttendance = max(array_map(fn($item) => $item['value'], $dailyAttendanceSeries)) ?: 1;
+
+        $monthlyPayrollRaw = \App\Models\Payroll::selectRaw('EXTRACT(MONTH FROM tanggal_selesai) as month_num, SUM(grand_total) as total')
+            ->whereBetween('tanggal_selesai', [now()->startOfMonth()->subMonths(5)->toDateString(), $monthEnd])
+            ->groupByRaw('EXTRACT(MONTH FROM tanggal_selesai)')
+            ->pluck('total', 'month_num')
+            ->toArray();
+
+        $monthlyPayrollSeries = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $m = now()->copy()->subMonths($i);
+            $monthNum = (int) $m->format('n');
+            $monthlyPayrollSeries[] = [
+                'label' => $m->translatedFormat('M'),
+                'value' => (float) ($monthlyPayrollRaw[$monthNum] ?? 0),
+            ];
+        }
+
+        $maxPayroll = max(array_map(fn($item) => $item['value'], $monthlyPayrollSeries)) ?: 1;
+
+        $topLembur = \App\Models\Attendance::with('employee')
+            ->whereBetween('tanggal', [$monthStart, $monthEnd])
+            ->orderByDesc('approved_overtime_hours')
+            ->limit(5)
+            ->get();
+    @endphp
+
     <style>
-        .custom-dash-hero {
-            position: relative;
-            overflow: hidden;
-            background: linear-gradient(135deg, #2563eb, #4f46e5);
+        .fi-header {
+            display: none !important;
+        }
+
+        .dash-shell {
+            display: grid;
+            gap: 1.25rem;
+        }
+
+        .dash-hero {
+            background: linear-gradient(120deg, #0f172a 0%, #1d4ed8 60%, #0891b2 100%);
             color: white;
-            border-radius: 1.5rem;
-            padding: 2.5rem;
-            box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.4);
-            margin-bottom: 2rem;
+            border-radius: 1.2rem;
+            padding: 1.6rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 1rem;
         }
 
-        .custom-dash-hero .blob1 {
-            position: absolute;
-            top: -50px;
-            right: -50px;
-            width: 250px;
-            height: 250px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            filter: blur(40px);
+        .dash-hero h1 {
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 900;
+            letter-spacing: -0.03em;
         }
 
-        .custom-dash-hero .blob2 {
-            position: absolute;
-            bottom: -50px;
-            left: -50px;
-            width: 200px;
-            height: 200px;
-            background: rgba(147, 197, 253, 0.2);
-            border-radius: 50%;
-            filter: blur(30px);
+        .dash-hero p {
+            margin-top: 0.45rem;
+            max-width: 640px;
+            color: rgba(255, 255, 255, 0.92);
+            line-height: 1.55;
         }
 
-        .hero-date-badge {
+        .hero-badge {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            background: rgba(255, 255, 255, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.35);
             border-radius: 999px;
-            padding: 8px 20px;
-            font-weight: 600;
-            backdrop-filter: blur(10px);
+            padding: 0.45rem 0.85rem;
+            font-size: 0.8rem;
+            font-weight: 800;
+            background: rgba(255, 255, 255, 0.12);
         }
 
-        .custom-grid {
+        .kpi-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 0.9rem;
         }
 
-        .custom-card {
-            background-color: var(--fi-bg-content, white);
-            border: 1px solid var(--fi-border-color, #e5e7eb);
+        .kpi-card {
+            background: white;
             border-radius: 1rem;
-            padding: 1.5rem;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
+            border: 1px solid #e5e7eb;
+            padding: 1rem 1.1rem;
+            box-shadow: 0 8px 18px -14px rgba(15, 23, 42, 0.4);
         }
 
-        .custom-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        .kpi-label {
+            color: #64748b;
+            text-transform: uppercase;
+            font-size: 0.66rem;
+            letter-spacing: 0.11em;
+            font-weight: 900;
         }
 
-        .icon-box {
-            width: 50px;
-            height: 50px;
-            border-radius: 0.75rem;
+        .kpi-value {
+            margin-top: 0.38rem;
+            font-size: 1.85rem;
+            line-height: 1;
+            font-weight: 900;
+            color: #0f172a;
+        }
+
+        .kpi-note {
+            margin-top: 0.35rem;
+            font-size: 0.78rem;
+            color: #64748b;
+        }
+
+        .section-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 1rem;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 1rem;
+            border: 1px solid #e5e7eb;
+            padding: 1rem;
+        }
+
+        .panel-title {
+            font-size: 0.95rem;
+            font-weight: 900;
+            color: #0f172a;
+            margin-bottom: 0.2rem;
+        }
+
+        .panel-sub {
+            font-size: 0.78rem;
+            color: #64748b;
+            margin-bottom: 0.9rem;
+        }
+
+        .mini-chart {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+            gap: 0.55rem;
+            align-items: end;
+            height: 160px;
+        }
+
+        .mini-chart.monthly {
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+        }
+
+        .bar-wrap {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: center;
-            margin-bottom: 1rem;
+            gap: 0.35rem;
         }
 
-        .icon-svg {
-            width: 24px;
-            height: 24px;
+        .bar {
+            width: 100%;
+            border-radius: 0.55rem;
+            min-height: 8px;
+            background: linear-gradient(180deg, #2563eb, #1d4ed8);
         }
 
-        /* Dark mode overrides automatically provided by Filament's CSS variables */
-        html.dark .custom-card {
-            background-color: #18181b;
+        .bar.secondary {
+            background: linear-gradient(180deg, #0ea5e9, #0284c7);
+        }
+
+        .bar-value {
+            font-size: 0.74rem;
+            font-weight: 800;
+            color: #1e293b;
+        }
+
+        .bar-label {
+            font-size: 0.7rem;
+            color: #64748b;
+            font-weight: 700;
+        }
+
+        .plain-list {
+            display: grid;
+            gap: 0.7rem;
+        }
+
+        .plain-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 0.75rem 0.85rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .plain-label {
+            font-size: 0.8rem;
+            color: #475569;
+            font-weight: 700;
+        }
+
+        .plain-value {
+            font-size: 0.86rem;
+            color: #0f172a;
+            font-weight: 900;
+        }
+
+        .table-wrap {
+            margin-top: 0.35rem;
+            overflow-x: auto;
+        }
+
+        .compact-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .compact-table th,
+        .compact-table td {
+            padding: 0.6rem 0.55rem;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.77rem;
+            text-align: left;
+        }
+
+        .compact-table th {
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 800;
+            font-size: 0.66rem;
+        }
+
+        .compact-table td:last-child,
+        .compact-table th:last-child {
+            text-align: right;
+        }
+
+        @media (max-width: 980px) {
+            .section-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        html.dark .kpi-card,
+        html.dark .panel {
+            background: #18181b;
             border-color: #27272a;
         }
 
-        html.dark .custom-dash-hero {
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+        html.dark .kpi-value,
+        html.dark .panel-title,
+        html.dark .bar-value,
+        html.dark .plain-value {
+            color: #f8fafc;
+        }
+
+        html.dark .kpi-label,
+        html.dark .kpi-note,
+        html.dark .panel-sub,
+        html.dark .bar-label,
+        html.dark .plain-label,
+        html.dark .compact-table th {
+            color: #a1a1aa;
+        }
+
+        html.dark .plain-item {
+            background: #1f1f23;
+            border-color: #2c2c31;
+        }
+
+        html.dark .compact-table td,
+        html.dark .compact-table th {
+            border-color: #2c2c31;
         }
     </style>
 
-    {{-- Hero Banner Modern --}}
-    <div class="custom-dash-hero">
-        <div class="blob1"></div>
-        <div class="blob2"></div>
-
-        <div
-            style="position: relative; z-index: 10; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+    <div class="dash-shell">
+        <section class="dash-hero">
             <div>
-                <h1 style="font-size: 2rem; font-weight: 800; margin: 0 0 10px 0; letter-spacing: -0.5px;">
-                    Halo, {{ auth()->user()->name ?? 'Admin' }}! 👋
-                </h1>
-                <p
-                    style="font-size: 1rem; color: rgba(255,255,255,0.9); margin: 0; max-width: 600px; line-height: 1.6;">
-                    Selamat datang di <b>Sistem Gaji Konveksi Celana</b>. Sistem siap membantu Anda merangkum data
-                    kehadiran, kalkulasi gaji, hingga pembuatan slip.
+                <h1>Dashboard Operasional Gaji</h1>
+                <p>
+                    Ringkasan hari ini untuk absensi, lembur, dan pengeluaran payroll. Halaman ini dibuat agar admin bisa cepat ambil keputusan tanpa perlu buka banyak menu.
                 </p>
             </div>
-            <div>
-                <div class="hero-date-badge">
-                    <svg class="icon-svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    {{ now()->translatedFormat('d F Y') }}
+            <span class="hero-badge">{{ now()->translatedFormat('d F Y') }}</span>
+        </section>
+
+        <section class="kpi-grid">
+            <article class="kpi-card">
+                <div class="kpi-label">Karyawan Aktif</div>
+                <div class="kpi-value">{{ number_format($karyawanAktif, 0, ',', '.') }}</div>
+                <div class="kpi-note">Basis data karyawan aktif saat ini.</div>
+            </article>
+
+            <article class="kpi-card">
+                <div class="kpi-label">Hadir Hari Ini</div>
+                <div class="kpi-value">{{ number_format($hadirHariIni, 0, ',', '.') }}</div>
+                <div class="kpi-note">Total log hadir non-libur pada hari ini.</div>
+            </article>
+
+            <article class="kpi-card">
+                <div class="kpi-label">Payroll Bulan Ini</div>
+                <div class="kpi-value">Rp {{ number_format($totalPayrollBulanIni, 0, ',', '.') }}</div>
+                <div class="kpi-note">Total pengeluaran gaji periode bulan berjalan.</div>
+            </article>
+
+            <article class="kpi-card">
+                <div class="kpi-label">Rata-rata per Karyawan</div>
+                <div class="kpi-value">Rp {{ number_format($rataRataGaji, 0, ',', '.') }}</div>
+                <div class="kpi-note">Estimasi rata-rata gaji per karyawan aktif.</div>
+            </article>
+        </section>
+
+        <section class="section-grid">
+            <article class="panel">
+                <h3 class="panel-title">Tren Kehadiran 7 Hari Terakhir</h3>
+                <p class="panel-sub">Visual cepat jumlah log kehadiran per hari.</p>
+
+                <div class="mini-chart">
+                    @foreach ($dailyAttendanceSeries as $point)
+                        @php
+                            $height = max(($point['value'] / $maxDailyAttendance) * 120, 8);
+                        @endphp
+                        <div class="bar-wrap">
+                            <div class="bar-value">{{ $point['value'] }}</div>
+                            <div class="bar" style="height: {{ $height }}px"></div>
+                            <div class="bar-label">{{ $point['label'] }}</div>
+                        </div>
+                    @endforeach
                 </div>
-            </div>
-        </div>
+            </article>
+
+            <article class="panel">
+                <h3 class="panel-title">Ringkasan Tanpa Grafik</h3>
+                <p class="panel-sub">Panel cepat untuk kondisi yang perlu tindakan admin.</p>
+
+                <div class="plain-list">
+                    <div class="plain-item">
+                        <span class="plain-label">Log scan parsial hari ini</span>
+                        <span class="plain-value">{{ number_format($scanParsialHariIni, 0, ',', '.') }}</span>
+                    </div>
+
+                    <div class="plain-item">
+                        <span class="plain-label">Jumlah data libur terdaftar</span>
+                        <span class="plain-value">{{ number_format(\App\Models\Holiday::count(), 0, ',', '.') }}</span>
+                    </div>
+
+                    <div class="plain-item">
+                        <span class="plain-label">Total payroll diterbitkan</span>
+                        <span class="plain-value">{{ number_format(\App\Models\Payroll::count(), 0, ',', '.') }} laporan</span>
+                    </div>
+                </div>
+            </article>
+        </section>
+
+        <section class="section-grid">
+            <article class="panel">
+                <h3 class="panel-title">Tren Nominal Payroll 6 Bulan</h3>
+                <p class="panel-sub">Perbandingan nominal pengeluaran payroll bulanan.</p>
+
+                <div class="mini-chart monthly">
+                    @foreach ($monthlyPayrollSeries as $point)
+                        @php
+                            $height = max(($point['value'] / $maxPayroll) * 120, 8);
+                        @endphp
+                        <div class="bar-wrap">
+                            <div class="bar-value">{{ $point['value'] > 0 ? number_format($point['value'] / 1000000, 1, ',', '.') . ' jt' : '0' }}</div>
+                            <div class="bar secondary" style="height: {{ $height }}px"></div>
+                            <div class="bar-label">{{ $point['label'] }}</div>
+                        </div>
+                    @endforeach
+                </div>
+            </article>
+
+            <article class="panel">
+                <h3 class="panel-title">Top Lembur Bulan Ini</h3>
+                <p class="panel-sub">5 data kehadiran dengan lembur disetujui tertinggi.</p>
+
+                <div class="table-wrap">
+                    <table class="compact-table">
+                        <thead>
+                            <tr>
+                                <th>Karyawan</th>
+                                <th>Tanggal</th>
+                                <th>Jam</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($topLembur as $item)
+                                <tr>
+                                    <td>{{ $item->employee->nama ?? '-' }}</td>
+                                    <td>{{ \Carbon\Carbon::parse($item->tanggal)->translatedFormat('d M Y') }}</td>
+                                    <td>{{ rtrim(rtrim(number_format((float) $item->approved_overtime_hours, 2, '.', ''), '0'), '.') }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="3">Belum ada data lembur pada bulan ini.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+        </section>
     </div>
-
-    {{-- Custom Stats Grid --}}
-    <div class="custom-grid">
-        {{-- Card 1 --}}
-        <div class="custom-card">
-            <div class="icon-box" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">
-                <svg class="icon-svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-            </div>
-            <div style="font-size: 0.875rem; font-weight: 600; color: var(--fi-text-subtle);">Karyawan Aktif</div>
-            <div style="font-size: 1.875rem; font-weight: 800; color: var(--fi-text-color);">
-                {{ \App\Models\Employee::where('is_active', true)->count() }}
-            </div>
-        </div>
-
-        {{-- Card 2 --}}
-        <div class="custom-card">
-            <div class="icon-box" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">
-                <svg class="icon-svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-            </div>
-            <div style="font-size: 0.875rem; font-weight: 600; color: var(--fi-text-subtle);">Total Log Kehadiran</div>
-            <div style="font-size: 1.875rem; font-weight: 800; color: var(--fi-text-color);">
-                {{ number_format(\App\Models\Attendance::count(), 0, ',', '.') }}
-            </div>
-        </div>
-
-        {{-- Card 3 --}}
-        <div class="custom-card">
-            <div class="icon-box" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">
-                <svg class="icon-svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-            </div>
-            <div style="font-size: 0.875rem; font-weight: 600; color: var(--fi-text-subtle);">Riwayat Gaji Dicetak</div>
-            <div style="font-size: 1.875rem; font-weight: 800; color: var(--fi-text-color);">
-                {{ \App\Models\Payroll::count() }}
-            </div>
-        </div>
-
-        {{-- Card 4 --}}
-        <div class="custom-card">
-            <div class="icon-box" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;">
-                <svg class="icon-svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-            </div>
-            <div style="font-size: 0.875rem; font-weight: 600; color: var(--fi-text-subtle);">Jadwal Hari Libur</div>
-            <div style="font-size: 1.875rem; font-weight: 800; color: var(--fi-text-color);">
-                {{ \App\Models\Holiday::count() }}
-            </div>
-        </div>
-    </div>
-
-    {{-- Widget Bawaan Standar Tetap Ditampilkan Di Bawah --}}
-    @if (method_exists($this, 'filtersForm'))
-        {{ $this->filtersForm }}
-    @endif
-
-    <x-filament-widgets::widgets :columns="$this->getColumns()" :data="$this->getWidgetData()"
-        :widgets="$this->getVisibleWidgets()" />
 </x-filament-panels::page>
