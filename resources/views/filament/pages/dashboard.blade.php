@@ -11,8 +11,25 @@
                 $q->whereNull('scan_masuk')->orWhereNull('scan_pulang');
             })
             ->count();
+        $totalAbsensiBulanIni = \App\Models\Attendance::whereBetween('tanggal', [$monthStart, $monthEnd])->count();
+        $scanParsialBulanIni = \App\Models\Attendance::whereBetween('tanggal', [$monthStart, $monthEnd])
+            ->where(function ($q) {
+                $q->whereNull('scan_masuk')->orWhereNull('scan_pulang');
+            })
+            ->count();
+        $persentaseKelengkapanAbsensi = $totalAbsensiBulanIni > 0
+            ? (1 - ($scanParsialBulanIni / $totalAbsensiBulanIni)) * 100
+            : 100;
+
         $totalPayrollBulanIni = \App\Models\Payroll::whereBetween('tanggal_selesai', [$monthStart, $monthEnd])->sum('grand_total');
         $rataRataGaji = $karyawanAktif > 0 ? $totalPayrollBulanIni / $karyawanAktif : 0;
+        $payrollTerakhir = \App\Models\Payroll::latest('tanggal_selesai')->first();
+
+        $upcomingHolidays = \App\Models\Holiday::query()
+            ->whereDate('tanggal', '>=', $today)
+            ->orderBy('tanggal')
+            ->limit(5)
+            ->get();
 
         $dailyAttendanceRaw = \App\Models\Attendance::selectRaw('tanggal, COUNT(*) as total')
             ->whereBetween('tanggal', [now()->subDays(6)->toDateString(), $today])
@@ -38,7 +55,24 @@
             ->pluck('total', 'month_num')
             ->toArray();
 
+        $monthlyPartialRaw = \App\Models\Attendance::selectRaw('EXTRACT(MONTH FROM tanggal) as month_num, COUNT(*) as total')
+            ->whereBetween('tanggal', [now()->startOfMonth()->subMonths(5)->toDateString(), $monthEnd])
+            ->where(function ($q) {
+                $q->whereNull('scan_masuk')->orWhereNull('scan_pulang');
+            })
+            ->groupByRaw('EXTRACT(MONTH FROM tanggal)')
+            ->pluck('total', 'month_num')
+            ->toArray();
+
+        $monthlyPayrollCompositionRaw = \App\Models\Payroll::selectRaw('EXTRACT(MONTH FROM tanggal_selesai) as month_num, SUM(total_gaji_pokok) as pokok, SUM(total_uang_lembur) as lembur')
+            ->whereBetween('tanggal_selesai', [now()->startOfMonth()->subMonths(5)->toDateString(), $monthEnd])
+            ->groupByRaw('EXTRACT(MONTH FROM tanggal_selesai)')
+            ->get()
+            ->keyBy(fn ($row) => (int) $row->month_num);
+
         $monthlyPayrollSeries = [];
+        $monthlyPartialSeries = [];
+        $monthlyCompositionSeries = [];
         for ($i = 5; $i >= 0; $i--) {
             $m = now()->copy()->subMonths($i);
             $monthNum = (int) $m->format('n');
@@ -46,9 +80,27 @@
                 'label' => $m->translatedFormat('M'),
                 'value' => (float) ($monthlyPayrollRaw[$monthNum] ?? 0),
             ];
+
+            $monthlyPartialSeries[] = [
+                'label' => $m->translatedFormat('M'),
+                'value' => (int) ($monthlyPartialRaw[$monthNum] ?? 0),
+            ];
+
+            $composition = $monthlyPayrollCompositionRaw->get($monthNum);
+            $pokok = (float) ($composition->pokok ?? 0);
+            $lembur = (float) ($composition->lembur ?? 0);
+
+            $monthlyCompositionSeries[] = [
+                'label' => $m->translatedFormat('M'),
+                'pokok' => $pokok,
+                'lembur' => $lembur,
+                'total' => $pokok + $lembur,
+            ];
         }
 
         $maxPayroll = max(array_map(fn($item) => $item['value'], $monthlyPayrollSeries)) ?: 1;
+        $maxPartial = max(array_map(fn($item) => $item['value'], $monthlyPartialSeries)) ?: 1;
+        $maxComposition = max(array_map(fn($item) => $item['total'], $monthlyCompositionSeries)) ?: 1;
 
         $topLembur = \App\Models\Attendance::with('employee')
             ->whereBetween('tanggal', [$monthStart, $monthEnd])
@@ -146,6 +198,86 @@
             gap: 1rem;
         }
 
+        .quick-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .quick-link {
+            display: block;
+            border-radius: 0.85rem;
+            padding: 0.75rem 0.85rem;
+            text-decoration: none;
+            color: #1e293b;
+            background: #ffffff;
+            border: 1px solid #dbeafe;
+            box-shadow: 0 8px 20px -18px rgba(37, 99, 235, 0.7);
+            transition: all 0.18s ease;
+        }
+
+        .quick-link:hover {
+            transform: translateY(-2px);
+            border-color: #93c5fd;
+            background: #f8fbff;
+        }
+
+        .quick-label {
+            font-size: 0.84rem;
+            font-weight: 900;
+            color: #1d4ed8;
+        }
+
+        .quick-sub {
+            margin-top: 0.2rem;
+            font-size: 0.74rem;
+            color: #64748b;
+            line-height: 1.45;
+        }
+
+        .health-meter {
+            margin-top: 0.6rem;
+            width: 100%;
+            height: 10px;
+            border-radius: 999px;
+            background: #e2e8f0;
+            overflow: hidden;
+        }
+
+        .health-fill {
+            height: 100%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #22c55e, #16a34a);
+        }
+
+        .list-mini {
+            display: grid;
+            gap: 0.55rem;
+        }
+
+        .list-mini-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.7rem;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            border-radius: 0.7rem;
+            padding: 0.62rem 0.72rem;
+        }
+
+        .list-mini-label {
+            font-size: 0.76rem;
+            font-weight: 800;
+            color: #334155;
+        }
+
+        .list-mini-date {
+            font-size: 0.72rem;
+            color: #64748b;
+            font-weight: 700;
+        }
+
         .panel {
             background: white;
             border-radius: 1rem;
@@ -194,6 +326,51 @@
 
         .bar.secondary {
             background: linear-gradient(180deg, #0ea5e9, #0284c7);
+        }
+
+        .bar.warning {
+            background: linear-gradient(180deg, #f59e0b, #d97706);
+        }
+
+        .stack-wrap {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            min-height: 8px;
+            border-radius: 0.55rem;
+            overflow: hidden;
+            background: #e2e8f0;
+        }
+
+        .stack-part {
+            width: 100%;
+        }
+
+        .stack-pokok {
+            background: linear-gradient(180deg, #1d4ed8, #1e40af);
+        }
+
+        .stack-lembur {
+            background: linear-gradient(180deg, #22c55e, #16a34a);
+        }
+
+        .legend-row {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 0.7rem;
+            font-size: 0.73rem;
+            color: #64748b;
+            font-weight: 700;
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            display: inline-flex;
+            margin-right: 0.35rem;
         }
 
         .bar-value {
@@ -300,6 +477,39 @@
             border-color: #2c2c31;
         }
 
+        html.dark .stack-wrap {
+            background: #2c2c31;
+        }
+
+        html.dark .quick-link {
+            background: #1a1a1f;
+            border-color: #24324a;
+            color: #f8fafc;
+        }
+
+        html.dark .quick-link:hover {
+            background: #16213a;
+            border-color: #1d4ed8;
+        }
+
+        html.dark .quick-label {
+            color: #93c5fd;
+        }
+
+        html.dark .quick-sub,
+        html.dark .list-mini-date {
+            color: #a1a1aa;
+        }
+
+        html.dark .list-mini-item {
+            background: #1f1f23;
+            border-color: #2c2c31;
+        }
+
+        html.dark .list-mini-label {
+            color: #e5e7eb;
+        }
+
         html.dark .compact-table td,
         html.dark .compact-table th {
             border-color: #2c2c31;
@@ -340,6 +550,65 @@
                 <div class="kpi-label">Rata-rata per Karyawan</div>
                 <div class="kpi-value">Rp {{ number_format($rataRataGaji, 0, ',', '.') }}</div>
                 <div class="kpi-note">Estimasi rata-rata gaji per karyawan aktif.</div>
+            </article>
+        </section>
+
+        <section class="section-grid">
+            <article class="panel">
+                <h3 class="panel-title">Aksi Cepat</h3>
+                <p class="panel-sub">Shortcut pekerjaan harian tanpa cari menu satu per satu.</p>
+
+                <div class="quick-grid">
+                    <a href="{{ \App\Filament\Resources\Attendances\AttendanceResource::getUrl('create') }}" class="quick-link">
+                        <div class="quick-label">Input Kehadiran</div>
+                        <div class="quick-sub">Tambah data absensi manual.</div>
+                    </a>
+
+                    <a href="{{ \App\Filament\Resources\Attendances\AttendanceResource::getUrl('index') }}" class="quick-link">
+                        <div class="quick-label">Verifikasi Absensi</div>
+                        <div class="quick-sub">Cek scan parsial sebelum payroll.</div>
+                    </a>
+
+                    <a href="{{ \App\Filament\Resources\Payrolls\PayrollResource::getUrl('index') }}" class="quick-link">
+                        <div class="quick-label">Generate Payroll</div>
+                        <div class="quick-sub">Buat rekap gaji periode berjalan.</div>
+                    </a>
+
+                    <a href="{{ \App\Filament\Resources\Settings\SettingResource::getUrl('index') }}" class="quick-link">
+                        <div class="quick-label">Atur Parameter</div>
+                        <div class="quick-sub">Sesuaikan rate lembur/gaji harian.</div>
+                    </a>
+                </div>
+            </article>
+
+            <article class="panel">
+                <h3 class="panel-title">Kesehatan Data Absensi</h3>
+                <p class="panel-sub">Indikator kualitas data pada bulan aktif.</p>
+
+                <div class="plain-list">
+                    <div class="plain-item">
+                        <span class="plain-label">Total absensi bulan ini</span>
+                        <span class="plain-value">{{ number_format($totalAbsensiBulanIni, 0, ',', '.') }}</span>
+                    </div>
+
+                    <div class="plain-item">
+                        <span class="plain-label">Scan parsial bulan ini</span>
+                        <span class="plain-value">{{ number_format($scanParsialBulanIni, 0, ',', '.') }}</span>
+                    </div>
+
+                    <div class="plain-item">
+                        <span class="plain-label">Kelengkapan data</span>
+                        <span class="plain-value">{{ number_format($persentaseKelengkapanAbsensi, 1, ',', '.') }}%</span>
+                    </div>
+                </div>
+
+                <div class="health-meter">
+                    <div class="health-fill" style="width: {{ max(min($persentaseKelengkapanAbsensi, 100), 0) }}%"></div>
+                </div>
+
+                <p class="panel-sub" style="margin-top: 0.6rem; margin-bottom: 0;">
+                    Payroll terakhir: {{ $payrollTerakhir ? \Carbon\Carbon::parse($payrollTerakhir->tanggal_selesai)->translatedFormat('d M Y') : 'Belum ada' }}
+                </p>
             </article>
         </section>
 
@@ -431,6 +700,100 @@
                             @endforelse
                         </tbody>
                     </table>
+                </div>
+            </article>
+        </section>
+
+        <section class="section-grid">
+            <article class="panel">
+                <h3 class="panel-title">Tren Scan Parsial 6 Bulan</h3>
+                <p class="panel-sub">Jumlah data absensi yang scan masuk/pulang tidak lengkap per bulan.</p>
+
+                <div class="mini-chart monthly">
+                    @foreach ($monthlyPartialSeries as $point)
+                        @php
+                            $height = max(($point['value'] / $maxPartial) * 120, 8);
+                        @endphp
+                        <div class="bar-wrap">
+                            <div class="bar-value">{{ $point['value'] }}</div>
+                            <div class="bar warning" style="height: {{ $height }}px"></div>
+                            <div class="bar-label">{{ $point['label'] }}</div>
+                        </div>
+                    @endforeach
+                </div>
+            </article>
+
+            <article class="panel">
+                <h3 class="panel-title">Komposisi Gaji per Bulan</h3>
+                <p class="panel-sub">Perbandingan gaji pokok dan uang lembur selama 6 bulan terakhir.</p>
+
+                <div class="mini-chart monthly">
+                    @foreach ($monthlyCompositionSeries as $point)
+                        @php
+                            $stackHeight = max(($point['total'] / $maxComposition) * 120, 8);
+                            $pokokRatio = $point['total'] > 0 ? ($point['pokok'] / $point['total']) : 0;
+                            $lemburRatio = $point['total'] > 0 ? ($point['lembur'] / $point['total']) : 0;
+                        @endphp
+                        <div class="bar-wrap">
+                            <div class="bar-value">{{ $point['total'] > 0 ? number_format($point['total'] / 1000000, 1, ',', '.') . ' jt' : '0' }}</div>
+                            <div class="stack-wrap" style="height: {{ $stackHeight }}px">
+                                <div class="stack-part stack-lembur" style="height: {{ max($lemburRatio * 100, 0) }}%"></div>
+                                <div class="stack-part stack-pokok" style="height: {{ max($pokokRatio * 100, 0) }}%"></div>
+                            </div>
+                            <div class="bar-label">{{ $point['label'] }}</div>
+                        </div>
+                    @endforeach
+                </div>
+
+                <div class="legend-row">
+                    <span><span class="legend-dot" style="background:#1d4ed8;"></span>Gaji Pokok</span>
+                    <span><span class="legend-dot" style="background:#16a34a;"></span>Uang Lembur</span>
+                </div>
+            </article>
+        </section>
+
+        <section class="section-grid">
+            <article class="panel">
+                <h3 class="panel-title">Agenda Libur Mendatang</h3>
+                <p class="panel-sub">5 tanggal libur terdekat dari hari ini.</p>
+
+                <div class="list-mini">
+                    @forelse ($upcomingHolidays as $holiday)
+                        <div class="list-mini-item">
+                            <div>
+                                <div class="list-mini-label">{{ $holiday->keterangan }}</div>
+                                <div class="list-mini-date">{{ \Carbon\Carbon::parse($holiday->tanggal)->translatedFormat('l') }}</div>
+                            </div>
+                            <div class="list-mini-date">{{ \Carbon\Carbon::parse($holiday->tanggal)->translatedFormat('d M Y') }}</div>
+                        </div>
+                    @empty
+                        <div class="list-mini-item">
+                            <div class="list-mini-label">Belum ada agenda libur.</div>
+                            <div class="list-mini-date">-</div>
+                        </div>
+                    @endforelse
+                </div>
+            </article>
+
+            <article class="panel">
+                <h3 class="panel-title">Catatan Operasional</h3>
+                <p class="panel-sub">Checklist cepat sebelum proses payroll.</p>
+
+                <div class="plain-list">
+                    <div class="plain-item">
+                        <span class="plain-label">1. Verifikasi scan parsial</span>
+                        <span class="plain-value">{{ $scanParsialBulanIni > 0 ? 'Perlu cek' : 'Aman' }}</span>
+                    </div>
+
+                    <div class="plain-item">
+                        <span class="plain-label">2. Update kalender libur</span>
+                        <span class="plain-value">Rutin bulanan</span>
+                    </div>
+
+                    <div class="plain-item">
+                        <span class="plain-label">3. Validasi rate gaji/lembur</span>
+                        <span class="plain-value">Sebelum generate</span>
+                    </div>
                 </div>
             </article>
         </section>
