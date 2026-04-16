@@ -6,6 +6,7 @@ use App\Filament\Resources\Attendances\AttendanceResource;
 use App\Models\Employee;
 use App\Models\Attendance;
 use App\Models\Holiday;
+use App\Models\Setting;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Resources\Pages\ListRecords;
@@ -36,26 +37,35 @@ class ListAttendances extends ListRecords
                 ])
                 ->action(function (array $data) {
                     $path = Storage::disk('local')->path($data['attachment']);
+                    $jamKerjaNormal = (float) (Setting::query()->where('key', Setting::KEY_JAM_KERJA_NORMAL)->value('value') ?? 8);
                     
                     // Membaca CSV / Excel menggunakan SimpleExcel
                     $rows = SimpleExcelReader::create($path)->getRows();
                     
                     $importCount = 0;
+                    $unknownEmployeeCount = 0;
+                    $invalidStatusCount = 0;
                     
-                    $rows->each(function(array $row) use (&$importCount) {
+                    $rows->each(function(array $row) use (&$importCount, &$unknownEmployeeCount, &$invalidStatusCount, $jamKerjaNormal) {
                         try {
                             $noId = $row['No. ID'] ?? null;
-                            $nama = $row['Nama'] ?? null;
                             $tanggalStr = $row['Tanggal'] ?? null;
                             
                             // Abaikan row kosong / header salah
                             if (!$noId || !$tanggalStr) return;
 
-                            // 1. Auto-sync Karyawan jika belum ada
-                            $employee = Employee::firstOrCreate(
-                                ['no_id' => $noId],
-                                ['nama' => $nama, 'emp_no' => $row['Emp No.'] ?? $noId, 'is_active' => true]
-                            );
+                            // 1. Karyawan wajib sudah terdaftar agar status kerja tervalidasi.
+                            $employee = Employee::query()->where('no_id', (string) $noId)->first();
+
+                            if (!$employee) {
+                                $unknownEmployeeCount++;
+                                return;
+                            }
+
+                            if (!in_array($employee->employment_status, [Employee::STATUS_PHL, Employee::STATUS_PKWT], true)) {
+                                $invalidStatusCount++;
+                                return;
+                            }
 
                             // 2. Format Tanggal dari DD/MM/YYYY
                             $tanggal = Carbon::createFromFormat('d/m/Y', $tanggalStr)->format('Y-m-d');
@@ -90,6 +100,8 @@ class ListAttendances extends ListRecords
                                 $totalJam = $awal->diffInMinutes($akhir) / 60;
                             }
 
+                            $totalJam = min($totalJam, $jamKerjaNormal);
+
                             // 6. Simpan Data Kehadiran (Upsert agar aman jika import 2x)
                             Attendance::updateOrCreate(
                                 ['employee_id' => $employee->id, 'tanggal' => $tanggal],
@@ -109,7 +121,7 @@ class ListAttendances extends ListRecords
 
                     Notification::make()
                         ->title("Import Berhasil!")
-                        ->body("Total {$importCount} data kehadiran tersimpan.")
+                        ->body("{$importCount} data tersimpan, {$unknownEmployeeCount} dilewati (karyawan belum terdaftar), {$invalidStatusCount} dilewati (status kerja tidak valid).")
                         ->success()
                         ->send();
                 }),

@@ -1,18 +1,25 @@
 <x-filament-panels::page>
     <style>
+        :root {
+            --ui-text-main: #0f172a;
+            --ui-text-soft: #64748b;
+            --ui-border: #e5e7eb;
+            --ui-bg-card: #ffffff;
+        }
+
         .attendance-container {
-            background: white;
+            background: var(--ui-bg-card);
             border-radius: 1.25rem;
-            border: 1px solid #e5e7eb;
+            border: 1px solid var(--ui-border);
             overflow: hidden;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
             margin-top: 1.5rem;
         }
 
         .search-row {
-            padding: 1.5rem;
+            padding: 1.1rem 1.25rem;
             background: #f9fafb;
-            border-bottom: 1px solid #e5e7eb;
+            border-bottom: 1px solid var(--ui-border);
             display: flex;
             gap: 1rem;
             align-items: center;
@@ -28,12 +35,13 @@
             width: 100%;
             padding: 0.6rem 1rem 0.6rem 2.75rem;
             border-radius: 0.75rem;
-            border: 1px solid #d1d5db;
-            font-size: 0.875rem;
+            border: 1px solid var(--ui-border);
+            font-size: 0.84rem;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'%3E%3C/path%3E%3C/svg%3E");
             background-repeat: no-repeat;
             background-position: 0.85rem center;
             background-size: 1.1rem;
+            background-color: var(--ui-bg-card);
         }
 
         .custom-table {
@@ -44,18 +52,18 @@
         .custom-table th {
             text-align: left;
             padding: 1rem 1.5rem;
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             color: #6b7280;
             background: #f9fafb;
-            border-bottom: 1px solid #e5e7eb;
+            border-bottom: 1px solid var(--ui-border);
         }
 
         .custom-table td {
-            padding: 1rem 1.5rem;
-            font-size: 0.875rem;
+            padding: 0.95rem 1.25rem;
+            font-size: 0.86rem;
             color: #374151;
             border-bottom: 1px solid #f3f4f6;
         }
@@ -119,8 +127,30 @@
             color: #2563eb;
         }
 
+        .ui-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            border: 1px solid #dbeafe;
+            text-decoration: none;
+            background: #eff6ff;
+            color: #1d4ed8;
+        }
+
+        .ui-btn:hover { background: #dbeafe; }
+
+        html.dark {
+            --ui-text-main: #f8fafc;
+            --ui-text-soft: #a1a1aa;
+            --ui-border: #27272a;
+            --ui-bg-card: #18181b;
+        }
+
         html.dark .attendance-container {
-            background: #18181b;
             border-color: #27272a;
         }
 
@@ -144,6 +174,12 @@
         html.dark .custom-table td {
             color: #e5e7eb;
             border-color: #27272a;
+        }
+
+        html.dark .ui-btn {
+            background: rgba(37, 99, 235, 0.2);
+            color: #bfdbfe;
+            border-color: rgba(147, 197, 253, 0.35);
         }
 
         html.dark .custom-table tr:hover td {
@@ -288,7 +324,6 @@
                         <th>Scan Masuk</th>
                         <th>Scan Pulang</th>
                         <th>Durasi Kerja</th>
-                        <th>Lembur Disetujui</th>
                         <th>Keterangan</th>
                         <th>Aksi</th>
                     </tr>
@@ -345,9 +380,6 @@
                                 <span class="total-duration">{{ number_format($attendance->total_jam_kerja, 1) }} Jam</span>
                             </td>
                             <td>
-                                <span class="text-pink-600 font-bold">{{ rtrim(rtrim(number_format((float) $attendance->approved_overtime_hours, 2, '.', ''), '0'), '.') }} Jam</span>
-                            </td>
-                            <td>
                                 @if($attendance->is_holiday)
                                     @php
                                         $attendanceDate = \Carbon\Carbon::parse($attendance->tanggal);
@@ -369,7 +401,7 @@
                             <td>
                                 <a
                                     href="{{ \App\Filament\Resources\Attendances\AttendanceResource::getUrl('edit', ['record' => $attendance->id]) }}"
-                                    style="display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 8px; background: #eff6ff; color: #1d4ed8; font-size: 0.75rem; font-weight: 800; border: 1px solid #dbeafe; text-decoration: none;"
+                                    class="ui-btn"
                                 >
                                     Edit
                                 </a>
@@ -377,7 +409,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="text-center py-12 text-gray-400 font-medium italic">
+                            <td colspan="7" class="text-center py-12 text-gray-400 font-medium italic">
                                 Tidak ada data kehadiran yang ditemukan.
                             </td>
                         </tr>

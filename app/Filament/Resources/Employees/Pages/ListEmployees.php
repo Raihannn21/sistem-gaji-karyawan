@@ -45,15 +45,18 @@ class ListEmployees extends ListRecords
 
                     $importedCount = 0;
                     $updatedCount = 0;
+                    $skippedCount = 0;
 
-                    $rows->each(function (array $row) use (&$importedCount, &$updatedCount): void {
+                    $rows->each(function (array $row) use (&$importedCount, &$updatedCount, &$skippedCount): void {
                         $normalizedRow = self::normalizeRowKeys($row);
 
                         $empNo = self::getFirstNotEmptyValue($normalizedRow, ['emp_no', 'empno', 'emp_number', 'employee_no']);
                         $noId = self::getFirstNotEmptyValue($normalizedRow, ['no_id', 'noid', 'id_karyawan']);
                         $nama = self::getFirstNotEmptyValue($normalizedRow, ['nama', 'name']);
+                        $status = self::normalizeEmploymentStatus(self::getFirstNotEmptyValue($normalizedRow, ['employment_status', 'status_kerja', 'status']));
 
-                        if (!$empNo || !$noId || !$nama) {
+                        if (!$empNo || !$noId || !$nama || !$status) {
+                            $skippedCount++;
                             return;
                         }
 
@@ -61,6 +64,7 @@ class ListEmployees extends ListRecords
                             'emp_no' => (string) $empNo,
                             'no_id' => (string) $noId,
                             'nama' => (string) $nama,
+                            'employment_status' => $status,
                             'nik' => self::nullableString(self::getFirstNotEmptyValue($normalizedRow, ['nik'])),
                             'email' => self::nullableString(self::getFirstNotEmptyValue($normalizedRow, ['email', 'email_address'])),
                             'departemen' => self::nullableString(self::getFirstNotEmptyValue($normalizedRow, ['departemen', 'department', 'dept'])),
@@ -82,7 +86,7 @@ class ListEmployees extends ListRecords
 
                     Notification::make()
                         ->title('Import Karyawan Selesai')
-                        ->body("{$importedCount} data baru ditambahkan, {$updatedCount} data diperbarui.")
+                        ->body("{$importedCount} data baru ditambahkan, {$updatedCount} data diperbarui, {$skippedCount} data dilewati (status kerja/kolom wajib kosong).")
                         ->success()
                         ->send();
                 }),
@@ -99,6 +103,7 @@ class ListEmployees extends ListRecords
                             'no_id',
                             'nik',
                             'nama',
+                            'employment_status',
                             'email',
                             'departemen',
                             'no_hp',
@@ -120,6 +125,7 @@ class ListEmployees extends ListRecords
                             'no_id' => $employee->no_id,
                             'nik' => $employee->nik,
                             'nama' => $employee->nama,
+                            'employment_status' => $employee->employment_status,
                             'email' => $employee->email,
                             'departemen' => $employee->departemen,
                             'no_hp' => $employee->no_hp,
@@ -207,5 +213,18 @@ class ListEmployees extends ListRecords
         }
 
         return $default;
+    }
+
+    private static function normalizeEmploymentStatus(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $normalized = strtoupper(trim((string) $value));
+
+        return in_array($normalized, [Employee::STATUS_PHL, Employee::STATUS_PKWT], true)
+            ? $normalized
+            : null;
     }
 }

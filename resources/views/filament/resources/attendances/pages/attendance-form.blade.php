@@ -176,7 +176,7 @@
             </h1>
 
             <p class="main-subtitle">
-                Form ini terhubung dengan aturan otomatis sistem: status hari libur dihitung dari tanggal dan kalender libur, total jam kerja dihitung dari scan masuk-pulang, dan lembur mengikuti ketentuan jam penuh.
+                Form ini terhubung dengan aturan otomatis sistem: status hari libur dihitung dari tanggal dan kalender libur, dan total jam kerja dihitung dari scan masuk-pulang dengan batas jam kerja normal.
             </p>
 
             <form wire:submit.prevent="{{ isset($this->record) ? 'save' : 'create' }}" class="mt-8">
@@ -206,7 +206,7 @@
 
                 <div class="guide-item">
                     <span class="guide-pill">3</span>
-                    <span>Lembur otomatis terisi, tapi tetap bisa dikoreksi jika ada instruksi atasan.</span>
+                    <span>Lembur tidak dihitung dari absensi. Input lembur dilakukan di menu Lembur Manual.</span>
                 </div>
 
                 <div class="guide-item">

@@ -4,13 +4,13 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Validation\ValidationException;
 
 class Attendance extends Model
 {
     protected $guarded = ['id'];
 
     protected $casts = [
-        'approved_overtime_hours' => 'float',
         'total_jam_kerja' => 'float',
         'is_holiday' => 'boolean',
         'tanggal' => 'date',
@@ -19,6 +19,12 @@ class Attendance extends Model
     protected static function booted(): void
     {
         static::saving(function (Attendance $attendance) {
+            if (self::isLockedByFinalizedPayroll($attendance->tanggal)) {
+                throw ValidationException::withMessages([
+                    'tanggal' => 'Periode payroll untuk tanggal ini sudah final, data kehadiran tidak dapat diubah.',
+                ]);
+            }
+
             if (!empty($attendance->tanggal)) {
                 $date = Carbon::parse($attendance->tanggal);
 
@@ -31,19 +37,13 @@ class Attendance extends Model
                 $attendance->scan_pulang,
                 (bool) $attendance->is_holiday
             );
+        });
 
-            $shouldAutoFillApprovedOvertime =
-                !$attendance->isDirty('approved_overtime_hours')
-                && (
-                    !$attendance->exists
-                    || (float) $attendance->getOriginal('approved_overtime_hours') <= 0
-                );
-
-            if ($shouldAutoFillApprovedOvertime) {
-                $attendance->approved_overtime_hours = self::calculateSuggestedOvertimeHours(
-                    (float) $attendance->total_jam_kerja,
-                    (bool) $attendance->is_holiday
-                );
+        static::deleting(function (Attendance $attendance) {
+            if (self::isLockedByFinalizedPayroll($attendance->tanggal)) {
+                throw ValidationException::withMessages([
+                    'tanggal' => 'Periode payroll untuk tanggal ini sudah final, data kehadiran tidak dapat dihapus.',
+                ]);
             }
         });
     }
@@ -70,28 +70,28 @@ class Attendance extends Model
             $akhir->addDay();
         }
 
-        return round($awal->diffInMinutes($akhir) / 60, 2);
-    }
-
-    private static function calculateSuggestedOvertimeHours(float $totalJamKerja, bool $isHoliday): float
-    {
-        if ($totalJamKerja <= 0) {
-            return 0;
-        }
-
-        if ($isHoliday) {
-            // Lembur hanya dihitung per jam penuh (>= 60 menit).
-            return (float) floor($totalJamKerja);
-        }
-
         $jamKerjaNormal = (float) (Setting::query()->where('key', 'jam_kerja_normal')->value('value') ?? 8);
 
-        // Hari kerja biasa: hanya jam lembur penuh yang dihitung.
-        return (float) floor(max($totalJamKerja - $jamKerjaNormal, 0));
+        return round(min($awal->diffInMinutes($akhir) / 60, $jamKerjaNormal), 2);
     }
 
     public function employee()
     {
         return $this->belongsTo(Employee::class);
+    }
+
+    private static function isLockedByFinalizedPayroll($tanggal): bool
+    {
+        if (empty($tanggal)) {
+            return false;
+        }
+
+        $date = Carbon::parse($tanggal)->toDateString();
+
+        return Payroll::query()
+            ->where('status_payroll', Payroll::STATUS_FINAL)
+            ->whereDate('tanggal_mulai', '<=', $date)
+            ->whereDate('tanggal_selesai', '>=', $date)
+            ->exists();
     }
 }

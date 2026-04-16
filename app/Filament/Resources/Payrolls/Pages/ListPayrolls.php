@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Payrolls\Pages;
 
 use App\Filament\Resources\Payrolls\PayrollResource;
+use App\Models\ManualOvertime;
 use App\Models\Payroll;
 use App\Models\Employee;
 use App\Models\Setting;
@@ -12,12 +13,15 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class ListPayrolls extends ListRecords
 {
     protected static string $resource = PayrollResource::class;
     protected string $view = 'filament.resources.payrolls.pages.list-payrolls';
+
+    public ?string $statusFilter = null;
 
     protected function getHeaderActions(): array
     {
@@ -54,56 +58,79 @@ class ListPayrolls extends ListRecords
                         return;
                     }
 
-                    $gajiHarian = Setting::where('key', 'gaji_harian')->value('value') ?? 100000;
-                    $rateLemburBiasa = Setting::where('key', 'rate_lembur_biasa')->value('value') ?? 20000;
-                    $rateLemburLibur = Setting::where('key', 'rate_lembur_libur')->value('value') ?? 35000;
-                    $jumlahKaryawanDiproses = DB::transaction(function () use ($data, $gajiHarian, $rateLemburBiasa, $rateLemburLibur) {
+                    $activeEmployees = Employee::query()->where('is_active', true)->get();
+
+                    $invalidStatusEmployees = $activeEmployees
+                        ->filter(fn (Employee $employee) => !in_array($employee->employment_status, [Employee::STATUS_PHL, Employee::STATUS_PKWT], true));
+
+                    if ($invalidStatusEmployees->isNotEmpty()) {
+                        Notification::make()
+                            ->title('Generate Dibatalkan')
+                            ->body('Masih ada karyawan aktif tanpa status kerja valid (PHL/PKWT). Perbaiki data karyawan terlebih dahulu.')
+                            ->danger()
+                            ->send();
+                        return;
+                    }
+
+                    $rateByStatus = [
+                        Employee::STATUS_PHL => [
+                            'gaji_harian' => (float) (Setting::query()->where('key', Setting::KEY_GAJI_HARIAN_PHL)->value('value') ?? 100000),
+                            'rate_biasa' => (float) (Setting::query()->where('key', Setting::KEY_RATE_LEMBUR_BIASA_PHL)->value('value') ?? 20000),
+                            'rate_libur' => (float) (Setting::query()->where('key', Setting::KEY_RATE_LEMBUR_LIBUR_PHL)->value('value') ?? 35000),
+                        ],
+                        Employee::STATUS_PKWT => [
+                            'gaji_harian' => (float) (Setting::query()->where('key', Setting::KEY_GAJI_HARIAN_PKWT)->value('value') ?? 125000),
+                            'rate_biasa' => (float) (Setting::query()->where('key', Setting::KEY_RATE_LEMBUR_BIASA_PKWT)->value('value') ?? 25000),
+                            'rate_libur' => (float) (Setting::query()->where('key', Setting::KEY_RATE_LEMBUR_LIBUR_PKWT)->value('value') ?? 40000),
+                        ],
+                    ];
+
+                    $jumlahKaryawanDiproses = DB::transaction(function () use ($data, $activeEmployees, $rateByStatus) {
                         $payroll = Payroll::create([
                             'periode' => $data['periode'],
                             'tanggal_mulai' => $data['tanggal_mulai'],
                             'tanggal_selesai' => $data['tanggal_selesai'],
+                            'status_payroll' => Payroll::STATUS_DRAFT,
                             'total_gaji_pokok' => 0,
                             'total_uang_lembur' => 0,
                             'grand_total' => 0,
                         ]);
 
-                        $employees = Employee::with([
-                            'attendances' => function ($query) use ($data) {
-                                $query->whereBetween('tanggal', [$data['tanggal_mulai'], $data['tanggal_selesai']]);
-                            }
-                        ])->where('is_active', true)->get();
-
                         $totalGajiPokokAll = 0;
                         $totalUangLemburAll = 0;
 
-                        foreach ($employees as $employee) {
-                            $totalHadir = 0;
-                            $jamLemburBiasa = 0;
-                            $jamLemburLibur = 0;
+                        foreach ($activeEmployees as $employee) {
+                            /** @var Employee $employee */
+                            $status = (string) $employee->employment_status;
+                            $rates = $rateByStatus[$status];
 
-                            foreach ($employee->attendances as $att) {
-                                $jamLemburDisetujui = max((float) $att->approved_overtime_hours, 0);
+                            $totalHadir = $employee->attendances()
+                                ->whereBetween('tanggal', [$data['tanggal_mulai'], $data['tanggal_selesai']])
+                                ->where('is_holiday', false)
+                                ->where('total_jam_kerja', '>', 0)
+                                ->count();
 
-                                if ($att->is_holiday) {
-                                    $jamLemburLibur += $jamLemburDisetujui;
-                                } else {
-                                    $totalHadir++;
-                                    $jamLemburBiasa += $jamLemburDisetujui;
-                                }
-                            }
+                            $manualOvertime = $employee->manualOvertimes()
+                                ->whereBetween('tanggal', [$data['tanggal_mulai'], $data['tanggal_selesai']])
+                                ->selectRaw('jenis_lembur, SUM(jam_lembur) as total_jam')
+                                ->groupBy('jenis_lembur')
+                                ->pluck('total_jam', 'jenis_lembur');
 
-                            $totalGajiKehadiran = $totalHadir * $gajiHarian;
-                            $totalGajiLemburBiasa = $jamLemburBiasa * $rateLemburBiasa;
-                            $totalGajiLemburLibur = $jamLemburLibur * $rateLemburLibur;
+                            $jamLemburBiasa = (int) ($manualOvertime[ManualOvertime::JENIS_BIASA] ?? 0);
+                            $jamLemburLibur = (int) ($manualOvertime[ManualOvertime::JENIS_LIBUR] ?? 0);
+
+                            $totalGajiKehadiran = $totalHadir * $rates['gaji_harian'];
+                            $totalGajiLemburBiasa = $jamLemburBiasa * $rates['rate_biasa'];
+                            $totalGajiLemburLibur = $jamLemburLibur * $rates['rate_libur'];
                             $totalKaryawanGaji = $totalGajiKehadiran + $totalGajiLemburBiasa + $totalGajiLemburLibur;
 
                             $payroll->details()->create([
                                 'employee_id' => $employee->id,
                                 'total_hadir' => $totalHadir,
                                 'total_gaji_kehadiran' => $totalGajiKehadiran,
-                                'jam_lembur_biasa' => round($jamLemburBiasa, 2),
+                                'jam_lembur_biasa' => $jamLemburBiasa,
                                 'total_gaji_lembur_biasa' => $totalGajiLemburBiasa,
-                                'jam_lembur_libur' => round($jamLemburLibur, 2),
+                                'jam_lembur_libur' => $jamLemburLibur,
                                 'total_gaji_lembur_libur' => $totalGajiLemburLibur,
                                 'total_gaji' => $totalKaryawanGaji,
                             ]);
@@ -118,7 +145,7 @@ class ListPayrolls extends ListRecords
                             'grand_total' => $totalGajiPokokAll + $totalUangLemburAll,
                         ]);
 
-                        return $employees->count();
+                        return $activeEmployees->count();
                     });
 
                     Notification::make()
@@ -131,10 +158,83 @@ class ListPayrolls extends ListRecords
         ];
     }
 
-    protected function getActions(): array
+    public function finalizePayrollRecord(int $recordId): void
     {
-        return [
-            \Filament\Actions\DeleteAction::make('delete'),
-        ];
+        $record = Payroll::query()->find($recordId);
+
+        if (!$record) {
+            Notification::make()->title('Data payroll tidak ditemukan')->danger()->send();
+            return;
+        }
+
+        if ($record->isFinalized()) {
+            Notification::make()->title('Payroll sudah final')->warning()->send();
+            return;
+        }
+
+        $record->update([
+            'status_payroll' => Payroll::STATUS_FINAL,
+            'finalized_at' => now(),
+            'finalized_by' => Auth::id(),
+        ]);
+
+        Notification::make()
+            ->title('Payroll Difinalisasi')
+            ->body('Periode payroll telah dikunci.')
+            ->success()
+            ->send();
+    }
+
+    public function reopenPayrollRecord(int $recordId): void
+    {
+        $record = Payroll::query()->find($recordId);
+
+        if (!$record) {
+            Notification::make()->title('Data payroll tidak ditemukan')->danger()->send();
+            return;
+        }
+
+        if (!$record->isFinalized()) {
+            Notification::make()->title('Payroll masih draft')->warning()->send();
+            return;
+        }
+
+        $record->update([
+            'status_payroll' => Payroll::STATUS_DRAFT,
+            'finalized_at' => null,
+            'finalized_by' => null,
+        ]);
+
+        Notification::make()
+            ->title('Finalisasi Dibuka')
+            ->body('Periode payroll kembali dapat diedit.')
+            ->success()
+            ->send();
+    }
+
+    public function deletePayrollRecord(int $recordId): void
+    {
+        $record = Payroll::query()->find($recordId);
+
+        if (!$record) {
+            Notification::make()->title('Data payroll tidak ditemukan')->danger()->send();
+            return;
+        }
+
+        if ($record->isFinalized()) {
+            Notification::make()
+                ->title('Gagal Menghapus')
+                ->body('Payroll yang sudah final harus dibuka finalisasinya terlebih dahulu.')
+                ->danger()
+                ->send();
+            return;
+        }
+
+        $record->delete();
+
+        Notification::make()
+            ->title('Payroll Dihapus')
+            ->success()
+            ->send();
     }
 }

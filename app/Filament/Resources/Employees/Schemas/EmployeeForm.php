@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Employees\Schemas;
 
+use App\Models\Employee;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
@@ -19,6 +21,14 @@ class EmployeeForm
                 TextInput::make('nik'),
                 TextInput::make('nama')
                     ->required(),
+                Select::make('employment_status')
+                    ->label('Status Kerja')
+                    ->options([
+                        Employee::STATUS_PHL => Employee::STATUS_PHL,
+                        Employee::STATUS_PKWT => Employee::STATUS_PKWT,
+                    ])
+                    ->required()
+                    ->native(false),
                 TextInput::make('email')
                     ->label('Email address')
                     ->email(),

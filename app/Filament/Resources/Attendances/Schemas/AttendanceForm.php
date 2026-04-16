@@ -35,7 +35,6 @@ class AttendanceForm
 
                         $set('is_holiday', $isHoliday);
                         $set('total_jam_kerja', $totalJam);
-                        $set('approved_overtime_hours', self::calculateSuggestedOvertimeHours($totalJam, $isHoliday));
                     }),
                 TimePicker::make('scan_masuk')
                     ->seconds(false)
@@ -46,7 +45,6 @@ class AttendanceForm
 
                         $set('total_jam_kerja', $totalJam);
                         $set('is_holiday', $isHoliday);
-                        $set('approved_overtime_hours', self::calculateSuggestedOvertimeHours($totalJam, $isHoliday));
                     }),
                 TimePicker::make('scan_pulang')
                     ->seconds(false)
@@ -57,19 +55,12 @@ class AttendanceForm
 
                         $set('total_jam_kerja', $totalJam);
                         $set('is_holiday', $isHoliday);
-                        $set('approved_overtime_hours', self::calculateSuggestedOvertimeHours($totalJam, $isHoliday));
                     }),
                 TextInput::make('total_jam_kerja')
                     ->label('Total Jam Kerja (Otomatis)')
                     ->required()
                     ->numeric()
                     ->readOnly()
-                    ->default(0),
-                TextInput::make('approved_overtime_hours')
-                    ->label('Lembur Disetujui Atasan (Jam)')
-                    ->helperText('Terisi otomatis dari durasi kerja, tetap bisa Anda koreksi jika ada instruksi atasan berbeda.')
-                    ->required()
-                    ->numeric()
                     ->default(0),
                 Toggle::make('is_holiday')
                     ->label('Hari Libur (Otomatis)')
@@ -100,7 +91,9 @@ class AttendanceForm
             $akhir->addDay();
         }
 
-        return round($awal->diffInMinutes($akhir) / 60, 2);
+        $jamKerjaNormal = (float) (Setting::query()->where('key', 'jam_kerja_normal')->value('value') ?? 8);
+
+        return round(min($awal->diffInMinutes($akhir) / 60, $jamKerjaNormal), 2);
     }
 
     private static function resolveHolidayStatus($tanggal): bool
@@ -112,20 +105,5 @@ class AttendanceForm
         $date = Carbon::parse($tanggal);
 
         return $date->isSunday() || Holiday::query()->whereDate('tanggal', $date->toDateString())->exists();
-    }
-
-    private static function calculateSuggestedOvertimeHours(float $totalJamKerja, bool $isHoliday): float
-    {
-        if ($totalJamKerja <= 0) {
-            return 0;
-        }
-
-        if ($isHoliday) {
-            return (float) floor($totalJamKerja);
-        }
-
-        $jamKerjaNormal = (float) (Setting::query()->where('key', 'jam_kerja_normal')->value('value') ?? 8);
-
-        return (float) floor(max($totalJamKerja - $jamKerjaNormal, 0));
     }
 }

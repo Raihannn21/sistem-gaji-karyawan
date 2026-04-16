@@ -1,5 +1,12 @@
 <x-filament-panels::page>
     <style>
+        :root {
+            --ui-text-main: #0f172a;
+            --ui-text-soft: #64748b;
+            --ui-border: #e5e7eb;
+            --ui-bg-card: #ffffff;
+        }
+
         .payroll-header-card {
             background: linear-gradient(135deg, #1e293b, #0f172a);
             border-radius: 1.5rem;
@@ -29,9 +36,9 @@
         }
 
         .detail-section {
-            background: white;
+            background: var(--ui-bg-card);
             border-radius: 1.5rem;
-            border: 1px solid #e5e7eb;
+            border: 1px solid var(--ui-border);
             overflow: hidden;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
@@ -56,7 +63,7 @@
         .custom-table td {
             padding: 1.25rem 1.5rem;
             border-bottom: 1px solid #f1f5f9;
-            font-size: 0.9rem;
+            font-size: 0.89rem;
         }
 
         .emp-cell {
@@ -94,7 +101,7 @@
             border-radius: 8px;
             font-size: 0.75rem;
             font-weight: 800;
-            font-family: monospace;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
         }
 
         .val-hadir {
@@ -119,7 +126,7 @@
             display: inline-block;
         }
 
-        .btn-action {
+        .ui-btn {
             display: inline-flex;
             align-items: center;
             gap: 6px;
@@ -128,21 +135,56 @@
             font-size: 0.75rem;
             font-weight: 800;
             transition: 0.2s;
+            border: 1px solid transparent;
+            text-transform: uppercase;
+            letter-spacing: 0.01em;
         }
 
-        .btn-email {
+        .ui-btn-soft {
+            background: #ffffff;
+            color: #334155;
+            border-color: #e2e8f0;
+        }
+
+        .ui-btn-soft:hover { background: #f8fafc; }
+
+        .ui-btn-success {
             background: #10b981;
             color: white;
+            border-color: #10b981;
             box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
         }
 
-        .btn-email:hover {
-            background: #059669;
-            transform: scale(1.05);
+        .ui-btn-success:hover { background: #059669; }
+
+        .toolbar {
+            display:flex;
+            justify-content:flex-end;
+            gap:10px;
+            margin:-0.75rem 0 1rem;
+            flex-wrap: wrap;
         }
+
+        .toolbar-btn {
+            padding:8px 14px;
+            border-radius:10px;
+            font-size:0.75rem;
+            font-weight:800;
+            border:1px solid transparent;
+        }
+
+        .toolbar-btn-blue { background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe; }
+        .toolbar-btn-gray { background:#f3f4f6; color:#1f2937; border-color:#d1d5db; }
 
         html.dark .payroll-header-card {
             background: #1e1e2e;
+        }
+
+        html.dark {
+            --ui-text-main: #f8fafc;
+            --ui-text-soft: #a1a1aa;
+            --ui-border: #27272a;
+            --ui-bg-card: #18181b;
         }
 
         .emp-cell {
@@ -197,6 +239,7 @@
 
         html.dark .search-input-custom-nempel {
             background-color: #18181b;
+            border-right: 1px solid #27272a;
             color: white;
         }
 
@@ -206,7 +249,6 @@
         }
 
         html.dark .detail-section {
-            background: #18181b;
             border-color: #27272a;
         }
 
@@ -217,6 +259,7 @@
 
         html.dark .custom-table td {
             border-color: #27272a;
+            color: #d4d4d8;
         }
 
         html.dark .emp-name {
@@ -234,6 +277,32 @@
             border-color: #27272a;
             color: white;
             box-shadow: none;
+        }
+
+        html.dark .toolbar-btn-blue {
+            background: rgba(30, 64, 175, 0.35);
+            color: #bfdbfe;
+            border-color: rgba(147, 197, 253, 0.35);
+        }
+
+        html.dark .toolbar-btn-gray {
+            background: #27272a;
+            color: #e4e4e7;
+            border-color: #3f3f46;
+        }
+
+        html.dark .ui-btn-soft {
+            background: #27272a;
+            color: #e5e7eb;
+            border-color: #3f3f46;
+        }
+
+        html.dark .ui-btn-soft:hover { background: #3f3f46; }
+
+        html.dark select {
+            background: #18181b;
+            color: #e5e7eb;
+            border-color: #3f3f46 !important;
         }
     </style>
 
@@ -258,12 +327,30 @@
         </div>
     </div>
 
+    <div class="toolbar">
+        <button wire:click="mountAction('exportExcel')"
+            class="toolbar-btn toolbar-btn-blue">
+            Export Excel
+        </button>
+        <button wire:click="mountAction('exportPdf')"
+            class="toolbar-btn toolbar-btn-gray">
+            Export PDF
+        </button>
+    </div>
+
     <div class="detail-section">
         {{-- Search Row Nempel --}}
-        <div class="px-0 py-0 bg-white border-b border-slate-100 dark:bg-transparent">
+        <div class="px-0 py-0 bg-white border-b border-slate-100 dark:bg-transparent" style="display:flex; gap:10px; align-items:center;">
             <input type="text" wire:model.live.debounce.300ms="tableSearch" 
                    placeholder="Cari nama karyawan..." 
-                   class="search-input-custom-nempel">
+                   class="search-input-custom-nempel" style="flex:1;">
+
+            <select wire:model.live="statusFilter"
+                    style="margin-right: 12px; border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px 12px; font-size: 0.8rem; font-weight: 700; color: #334155; min-width: 150px; background: var(--ui-bg-card);">
+                <option value="">Semua Status</option>
+                <option value="PHL">PHL</option>
+                <option value="PKWT">PKWT</option>
+            </select>
         </div>
 
         <div class="overflow-x-auto">
@@ -281,10 +368,16 @@
                 <tbody>
                     @php
                         $search = $this->tableSearch;
+                        $statusFilter = $this->statusFilter;
                         $detailsList = $this->record->details()
                             ->when($search, function ($q) use ($search) {
                                 return $q->whereHas('employee', function ($query) use ($search) {
                                     $query->where('nama', 'ilike', "%{$search}%");
+                                });
+                            })
+                            ->when($statusFilter, function ($q) use ($statusFilter) {
+                                return $q->whereHas('employee', function ($query) use ($statusFilter) {
+                                    $query->where('employment_status', $statusFilter);
                                 });
                             })
                             ->get();
@@ -298,7 +391,7 @@
                                     </div>
                                     <div style="min-width: 0;">
                                         <div class="emp-name text-sm truncate" title="{{ $d->employee->nama }}">{{ $d->employee->nama }}</div>
-                                        <div class="emp-id text-[9px] opacity-70">ID: {{ $d->employee->no_id }}</div>
+                                        <div class="emp-id text-[9px] opacity-70">ID: {{ $d->employee->no_id }} | {{ $d->employee->employment_status }}</div>
                                     </div>
                                 </div>
                             </td>
@@ -315,7 +408,7 @@
                                     {{ number_format($d->total_gaji_lembur_biasa + $d->total_gaji_lembur_libur, 0, ',', '.') }}
                                 </div>
                                 <div class="text-[9px] text-slate-400 font-black uppercase">
-                                    {{ rtrim(rtrim(number_format($d->jam_lembur_biasa + $d->jam_lembur_libur, 2, '.', ''), '0'), '.') }} Jam diakui</div>
+                                    {{ (int) $d->jam_lembur_biasa + (int) $d->jam_lembur_libur }} Jam manual</div>
                             </td>
                             <td class="text-right align-middle">
                                 <div class="total-pay-badge whitespace-nowrap" style="font-size: 0.95rem; display: block; text-align: center;">
@@ -326,16 +419,14 @@
                                 <div class="flex justify-center items-center gap-3 whitespace-nowrap">
                                     {{-- Mini Card: Rumus --}}
                                     <button wire:click="mountAction('rincian', { record: {{ $d->id }} })"
-                                        style="padding: 8px 14px; border-radius: 10px; font-size: 0.75rem; font-weight: 800;"
-                                        class="bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 shadow-sm flex items-center gap-2 transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200">
-                                        <span class="opacity-70">🧮</span> RUMUS
+                                        class="ui-btn ui-btn-soft">
+                                        Rumus
                                     </button>
 
                                     {{-- Mini Card: Kirim Slip --}}
                                     <button wire:click="mountAction('kirim_slip', { record: {{ $d->id }} })"
-                                        style="padding: 8px 14px; border-radius: 10px; font-size: 0.75rem; font-weight: 800;"
-                                        class="bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-100 flex items-center gap-2 transition-all border border-emerald-400 dark:shadow-none">
-                                        <span class="opacity-80">✉️</span> KIRIM SLIP
+                                        class="ui-btn ui-btn-success">
+                                        Kirim Slip
                                     </button>
                                 </div>
                             </td>

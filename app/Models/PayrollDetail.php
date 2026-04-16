@@ -9,8 +9,8 @@ class PayrollDetail extends Model
     protected $guarded = ['id'];
 
     protected $casts = [
-        'jam_lembur_biasa' => 'float',
-        'jam_lembur_libur' => 'float',
+        'jam_lembur_biasa' => 'integer',
+        'jam_lembur_libur' => 'integer',
     ];
 
     public function payroll()

@@ -5,6 +5,11 @@
         ->whereBetween('tanggal', [$record->payroll->tanggal_mulai, $record->payroll->tanggal_selesai])
         ->orderBy('tanggal')
         ->get();
+
+    $manualOvertimes = \App\Models\ManualOvertime::where('employee_id', $record->employee_id)
+        ->whereBetween('tanggal', [$record->payroll->tanggal_mulai, $record->payroll->tanggal_selesai])
+        ->get()
+        ->groupBy(fn($item) => $item->tanggal->toDateString());
 @endphp
 <style>
     .modal-container-modern { font-family: 'Inter', sans-serif; color: #1e293b; }
@@ -79,7 +84,8 @@
         @foreach($attendances as $att)
             @php
                 $isLibur = $att->is_holiday;
-                $lembur = max((float) $att->approved_overtime_hours, 0);
+                $dateKey = \Carbon\Carbon::parse($att->tanggal)->toDateString();
+                $lembur = (int) (($manualOvertimes[$dateKey] ?? collect())->sum('jam_lembur'));
             @endphp
             <div class="daily-row">
                 <div style="display: flex; align-items: center; gap: 12px;">
@@ -96,8 +102,8 @@
                 </div>
                 @if($lembur > 0)
                     <div style="text-align: right;">
-                        <div style="font-size: 8px; font-weight: 900; text-transform: uppercase; color: #db2777;">Lembur</div>
-                        <div style="font-size: 12px; font-weight: 900; color: #be123c;">+{{ rtrim(rtrim(number_format($lembur, 2, '.', ''), '0'), '.') }} Jm</div>
+                        <div style="font-size: 8px; font-weight: 900; text-transform: uppercase; color: #db2777;">Lembur Manual</div>
+                        <div style="font-size: 12px; font-weight: 900; color: #be123c;">+{{ $lembur }} Jm</div>
                     </div>
                 @endif
             </div>

@@ -24,6 +24,10 @@ class PayrollsTable
                 TextColumn::make('tanggal_selesai')
                     ->date()
                     ->sortable(),
+                TextColumn::make('status_payroll')
+                    ->label('Status')
+                    ->badge()
+                    ->sortable(),
                 TextColumn::make('total_gaji_pokok')
                     ->numeric()
                     ->sortable(),

@@ -35,10 +35,6 @@ class AttendancesTable
                     ->label('Total Waktu Kerja')
                     ->formatStateUsing(fn ($state) => floor($state) . ' Jam ' . round(($state - floor($state)) * 60) . ' Mnt')
                     ->sortable(),
-                TextColumn::make('approved_overtime_hours')
-                    ->label('Lembur Disetujui')
-                    ->formatStateUsing(fn ($state) => rtrim(rtrim(number_format((float) $state, 2, '.', ''), '0'), '.') . ' Jam')
-                    ->sortable(),
                 IconColumn::make('is_holiday')
                     ->label('Hari Libur')
                     ->boolean(),

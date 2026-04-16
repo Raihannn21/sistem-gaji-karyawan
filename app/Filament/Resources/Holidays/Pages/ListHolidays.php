@@ -8,7 +8,6 @@ use Filament\Actions\CreateAction;
 use Filament\Actions\Action;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Notifications\Notification;
-use Illuminate\Support\Facades\Http;
 use Carbon\Carbon;
 
 class ListHolidays extends ListRecords
@@ -20,51 +19,35 @@ class ListHolidays extends ListRecords
     {
         return [
             Action::make('syncHolidays')
-                ->label('Tarik Tanggal Merah ' . date('Y'))
+                ->label('Tarik Hari Minggu ' . date('Y'))
                 ->icon('heroicon-o-cloud-arrow-down')
                 ->color('info')
                 ->action(function () {
                     try {
                         $year = date('Y');
-                        $response = Http::timeout(10)->get("https://api-hari-libur.vercel.app/api?year={$year}");
-                        if ($response->successful()) {
-                            $data = $response->json('data');
-                            $count = 0;
-                            foreach ($data as $item) {
-                                $created = Holiday::firstOrCreate(
-                                    ['tanggal' => $item['date']],
-                                    ['keterangan' => $item['description']]
+
+                        $startDate = Carbon::create($year, 1, 1);
+                        $endDate = Carbon::create($year, 12, 31);
+                        $sundayCount = 0;
+
+                        for ($date = $startDate; $date->lte($endDate); $date->addDay()) {
+                            if ($date->isSunday()) {
+                                $createdSunday = Holiday::firstOrCreate(
+                                    ['tanggal' => $date->format('Y-m-d')],
+                                    ['keterangan' => 'Libur Akhir Pekan (Minggu)']
                                 );
-                                if ($created->wasRecentlyCreated) {
-                                    $count++;
+
+                                if ($createdSunday->wasRecentlyCreated) {
+                                    $sundayCount++;
                                 }
                             }
-                            
-                            // Generate semua Hari Minggu di tahun tersebut
-                            $startDate = Carbon::create($year, 1, 1);
-                            $endDate = Carbon::create($year, 12, 31);
-                            $sundayCount = 0;
-                            
-                            for ($date = $startDate; $date->lte($endDate); $date->addDay()) {
-                                if ($date->isSunday()) {
-                                    $createdSunday = Holiday::firstOrCreate(
-                                        ['tanggal' => $date->format('Y-m-d')],
-                                        ['keterangan' => 'Libur Akhir Pekan (Minggu)']
-                                    );
-                                    if ($createdSunday->wasRecentlyCreated) {
-                                        $sundayCount++;
-                                    }
-                                }
-                            }
-                            
-                            Notification::make()
-                                ->title('Sinkronisasi Sukses')
-                                ->body("Berhasil menarik {$count} libur nasional & {$sundayCount} hari Minggu.")
-                                ->success()
-                                ->send();
-                        } else {
-                            throw new \Exception("Server kalender sibuk.");
                         }
+
+                        Notification::make()
+                            ->title('Sinkronisasi Sukses')
+                            ->body("Berhasil menambahkan {$sundayCount} hari Minggu pada tahun {$year}.")
+                            ->success()
+                            ->send();
                     } catch (\Exception $e) {
                         Notification::make()
                             ->title('Gagal Sinkronisasi')
@@ -75,5 +58,25 @@ class ListHolidays extends ListRecords
                 }),
             CreateAction::make(),
         ];
+    }
+
+    public function deleteHoliday(int $holidayId): void
+    {
+        $holiday = Holiday::query()->find($holidayId);
+
+        if (!$holiday) {
+            Notification::make()
+                ->title('Data tidak ditemukan')
+                ->danger()
+                ->send();
+            return;
+        }
+
+        $holiday->delete();
+
+        Notification::make()
+            ->title('Data libur dihapus')
+            ->success()
+            ->send();
     }
 }

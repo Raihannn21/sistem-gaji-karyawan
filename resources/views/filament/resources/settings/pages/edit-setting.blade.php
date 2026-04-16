@@ -19,6 +19,23 @@
             box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);
         }
 
+        .fi-header { display: none !important; }
+
+        .page-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.7rem;
+            letter-spacing: 0.09em;
+            text-transform: uppercase;
+            font-weight: 800;
+            color: #3b82f6;
+            background: #eff6ff;
+            border: 1px solid #dbeafe;
+            border-radius: 999px;
+            padding: 0.35rem 0.75rem;
+        }
+
         .preview-sticky {
             position: sticky;
             top: 2rem;
@@ -110,8 +127,9 @@
         {{-- KIRI: FORM --}}
         <div class="form-panel shadow-sm">
             <div class="mb-8">
-                <h2 class="text-2xl font-black text-slate-900 dark:text-white leading-tight">Konfigurasi Sistem</h2>
-                <p class="text-slate-500 text-sm mt-1">Lakukan pembaruan nilai parameter finansial di bawah ini.</p>
+                <span class="page-kicker">Data Master > Konfigurasi</span>
+                <h2 class="text-2xl font-black text-slate-900 dark:text-white leading-tight mt-4">Konfigurasi Sistem</h2>
+                <p class="text-slate-500 text-sm mt-1">Lakukan pembaruan nilai parameter finansial di bawah ini dan simpan untuk menerapkan perubahan di payroll.</p>
             </div>
 
             <form wire:submit.prevent="save">

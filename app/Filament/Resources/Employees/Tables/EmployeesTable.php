@@ -9,6 +9,7 @@ use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
@@ -26,6 +27,10 @@ class EmployeesTable
                     ->searchable(),
                 TextColumn::make('nama')
                     ->searchable(),
+                TextColumn::make('employment_status')
+                    ->label('Status')
+                    ->badge()
+                    ->sortable(),
                 TextColumn::make('email')
                     ->label('Email address')
                     ->searchable(),
@@ -49,6 +54,12 @@ class EmployeesTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                SelectFilter::make('employment_status')
+                    ->label('Status Kerja')
+                    ->options([
+                        'PHL' => 'PHL',
+                        'PKWT' => 'PKWT',
+                    ]),
                 TrashedFilter::make(),
             ])
             ->recordActions([

@@ -101,6 +101,11 @@ class DetailsRelationManager extends RelationManager
                                             ->orderBy('tanggal')
                                             ->get();
 
+                                        $manualOvertimes = \App\Models\ManualOvertime::where('employee_id', $record->employee_id)
+                                            ->whereBetween('tanggal', [$record->payroll->tanggal_mulai, $record->payroll->tanggal_selesai])
+                                            ->get()
+                                            ->groupBy(fn ($item) => \Carbon\Carbon::parse($item->tanggal)->toDateString());
+
                                         if ($attendances->isEmpty())
                                             return new HtmlString('<p class="text-gray-500">Tidak ada log kehadiran pada periode ini.</p>');
 
@@ -118,9 +123,10 @@ class DetailsRelationManager extends RelationManager
                                         foreach ($attendances as $att) {
                                             $isLibur = $att->is_holiday ? '<span class="text-danger-600 font-bold">Ya</span>' : '<span class="text-gray-500">Tidak</span>';
 
-                                            $lembur = max((float) $att->approved_overtime_hours, 0);
+                                            $dateKey = \Carbon\Carbon::parse($att->tanggal)->toDateString();
+                                            $lembur = (int) (($manualOvertimes[$dateKey] ?? collect())->sum('jam_lembur'));
 
-                                            $lemburText = $lembur > 0 ? "<span class=\"font-bold text-success-600\">" . rtrim(rtrim(number_format($lembur, 2, '.', ''), '0'), '.') . " Jam</span>" : "-";
+                                            $lemburText = $lembur > 0 ? "<span class=\"font-bold text-success-600\">{$lembur} Jam</span>" : "-";
                                             $jamText = floor($att->total_jam_kerja) . "j " . round(($att->total_jam_kerja - floor($att->total_jam_kerja)) * 60) . "m";
 
                                             $html .= "<tr class=\"hover:bg-gray-50 dark:hover:bg-white/5 transition-colors\">
