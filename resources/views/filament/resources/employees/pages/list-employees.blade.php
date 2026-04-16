@@ -270,9 +270,9 @@
         $status = $this->tableFilters['employment_status']['value'] ?? null;
 
         $employees = \App\Models\Employee::when($search, function ($query) use ($search) {
-            return $query->where('nama', 'ilike', "%{$search}%")
-                ->orWhere('no_id', 'ilike', "%{$search}%")
-                ->orWhere('emp_no', 'ilike', "%{$search}%");
+            return $query->where('nama', 'like', "%{$search}%")
+                ->orWhere('no_id', 'like', "%{$search}%")
+                ->orWhere('emp_no', 'like', "%{$search}%");
         })
             ->when($status, fn ($query) => $query->where('employment_status', $status))
             ->orderBy('nama', 'asc')

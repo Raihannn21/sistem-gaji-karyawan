@@ -186,8 +186,8 @@
                 ->when($search, function ($q) use ($search) {
                     return $q->where(function ($query) use ($search) {
                         $query->whereHas('employee', function ($eq) use ($search) {
-                            $eq->where('nama', 'ilike', "%{$search}%");
-                        })->orWhere('keterangan', 'ilike', "%{$search}%");
+                            $eq->where('nama', 'like', "%{$search}%");
+                        })->orWhere('keterangan', 'like', "%{$search}%");
                     });
                 })
                 ->when($jenis, fn ($q) => $q->where('jenis_lembur', $jenis))

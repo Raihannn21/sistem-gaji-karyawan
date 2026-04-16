@@ -372,7 +372,7 @@
                         $detailsList = $this->record->details()
                             ->when($search, function ($q) use ($search) {
                                 return $q->whereHas('employee', function ($query) use ($search) {
-                                    $query->where('nama', 'ilike', "%{$search}%");
+                                    $query->where('nama', 'like', "%{$search}%");
                                 });
                             })
                             ->when($statusFilter, function ($q) use ($statusFilter) {

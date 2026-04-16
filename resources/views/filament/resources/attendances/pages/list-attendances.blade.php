@@ -337,7 +337,7 @@
                         $attendances = \App\Models\Attendance::with('employee')
                             ->when($search, function ($query) use ($search) {
                                 return $query->whereHas('employee', function ($q) use ($search) {
-                                    $q->where('nama', 'ilike', "%{$search}%");
+                                    $q->where('nama', 'like', "%{$search}%");
                                 });
                             })
                             ->when($bulan, fn($q) => $q->whereMonth('tanggal', $bulan))

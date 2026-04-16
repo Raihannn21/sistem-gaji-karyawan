@@ -223,7 +223,7 @@
     @php
         $search = $this->tableSearch;
         $statusFilter = $this->statusFilter;
-        $payrollsQuery = \App\Models\Payroll::when($search, fn($q) => $q->where('periode', 'ilike', "%{$search}%"))
+        $payrollsQuery = \App\Models\Payroll::when($search, fn($q) => $q->where('periode', 'like', "%{$search}%"))
                         ->orderBy('tanggal_mulai', 'desc');
         $payrolls = $payrollsQuery->get();
 
