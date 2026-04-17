@@ -21,7 +21,6 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             SettingsSeeder::class,
-            EmployeeSampleSeeder::class,
         ]);
     }
 }
