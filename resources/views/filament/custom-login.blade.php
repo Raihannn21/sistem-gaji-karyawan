@@ -27,7 +27,7 @@
         position: relative; z-index: 2147483647;
     ">
         {{-- Sisi Kiri: Branding --}}
-        <div style="flex: 1; background: linear-gradient(135deg, #1d4ed8, #2563eb); padding: 50px; color: white; display: flex; flex-direction: column; justify-content: center;">
+        <div style="flex: 1; background: linear-gradient(135deg, #1d4ed8, #2563eb); padding: 50px; color: black; display: flex; flex-direction: column; justify-content: center;">
             <div style="background: rgba(255,255,255,0.1); width: 60px; height: 60px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.5rem; margin-bottom: 25px;">KC</div>
             <h1 style="font-size: 2.5rem; font-weight: 900; line-height: 1.1; margin-bottom: 20px;">Konveksi Celana Payroll.</h1>
             <p style="font-size: 1.1rem; opacity: 0.8; line-height: 1.6;">Sistem manajemen penggajian karyawan pintar dengan kalkulasi transparan dan akurat.</p>
